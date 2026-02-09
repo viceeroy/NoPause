@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mic, Flame, Target, Clock, TrendingUp, Shield, Zap, Sparkles, Timer } from 'lucide-react';
 import { storage } from '@/lib/storage';
@@ -21,8 +21,6 @@ const StatCard = ({ icon: Icon, label, value, sub, className, testId }) => (
 export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
-
-  // Content for Practice page
   const [lemonWord, setLemonWord] = useState('');
   const [topicPrompt, setTopicPrompt] = useState(null);
 
@@ -35,16 +33,14 @@ export default function Dashboard() {
   }, []);
 
   // Navigation handlers
-  const startFreeSpeak = () => {
-    navigate('/practice/free-speaking');
-  };
-
-  const startLemon = () => {
-    navigate(`/practice?mode=lemon&word=${encodeURIComponent(lemonWord)}`);
-  };
-
-  const startTopic = () => {
-    navigate(`/practice?mode=topic&prompt=${encodeURIComponent(topicPrompt.id)}`);
+  const handleCardClick = (mode) => {
+    if (mode === 'free') {
+      navigate('/practice/free-speaking');
+    } else if (mode === 'lemon') {
+      navigate('/practice?mode=lemon');
+    } else if (mode === 'topic') {
+      navigate('/practice?mode=topic');
+    }
   };
 
   const formatTime = (seconds) => {
@@ -79,105 +75,74 @@ export default function Dashboard() {
       {/* Speaking Area */}
       <div className="mb-16">
         {/* Free Speaking Block */}
-        <div className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-8 mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2.5 rounded-2xl bg-sage-100">
-              <Mic size={20} className="text-sage-600" />
-            </div>
-            <div>
-              <h3 className="text-xl font-serif text-foreground mb-1">Free Speaking</h3>
-              <p className="text-sm text-muted-foreground font-sans">Talk about anything, no timer</p>
+        <div
+          data-testid="free-speak-card"
+          onClick={() => handleCardClick('free')}
+          className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-12 mb-8 text-center cursor-pointer card-hover btn-press relative overflow-hidden group"
+        >
+          <div className="flex justify-center mb-6">
+            <div className="relative w-32 h-32 rounded-full flex items-center justify-center bg-sage-50 transition-transform duration-300 group-hover:scale-110">
+              <div className="absolute inset-0 rounded-full animate-pulse bg-sage-400 opacity-20"></div>
+              <Mic size={56} className="text-sage-600 relative z-10" />
             </div>
           </div>
 
-          <div className="text-center mb-6">
-            <div className="flex justify-center mb-4">
-              <div className="relative w-24 h-24 rounded-full flex items-center justify-center bg-sage-100">
-                <div className="absolute inset-0 rounded-full animate-pulse bg-sage-400 opacity-20"></div>
-                <Mic size={40} className="text-sage-600 relative z-10" />
-              </div>
-            </div>
-            <p className="text-sm text-muted-foreground font-sans">Practice speaking freely without time limits</p>
-          </div>
-
-          <button
-            onClick={startFreeSpeak}
-            className="w-full py-3 rounded-full font-sans font-semibold text-sm btn-press transition-colors bg-sage-500 hover:bg-sage-600 text-white"
-          >
-            Start Free Speak
-          </button>
+          <h3 className="text-2xl font-serif text-foreground mb-1">Free Speaking</h3>
+          <p className="text-base text-muted-foreground font-sans">Practice continuous speaking without time limits</p>
         </div>
 
         {/* Side-by-side blocks */}
         <div className="grid md:grid-cols-2 gap-8">
           {/* Lemon Technique */}
-          <div className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-8">
-            <div className="flex items-center gap-3 mb-6">
+          <div
+            onClick={() => handleCardClick('lemon')}
+            className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-8 text-center cursor-pointer card-hover btn-press relative overflow-hidden group"
+          >
+            <div className="flex items-center gap-3 mb-6 text-left">
               <div className="p-2.5 rounded-2xl bg-yellow-100">
                 <Timer size={20} className="text-yellow-600" />
               </div>
               <div>
                 <h3 className="text-xl font-serif text-foreground mb-1">Lemon Technique</h3>
-                <p className="text-sm text-muted-foreground font-sans">1 minute speaking</p>
+                <p className="text-sm text-muted-foreground font-sans">1 minute pressure speaking</p>
               </div>
             </div>
 
-            <div className="text-center mb-6">
-              <div className="text-3xl font-serif font-medium text-foreground mb-2">
-                {lemonWord}
-              </div>
-              <p className="text-sm text-muted-foreground font-sans">Random word</p>
+            <div className="py-8 bg-yellow-50/50 rounded-2xl mb-4 border border-yellow-100 flex items-center justify-center gap-2">
+              <Sparkles size={20} className="text-yellow-500 opacity-60" />
+              <p className="text-sm text-yellow-800 font-sans font-medium italic">Random word challenge</p>
             </div>
 
-            <div className="text-center mb-4">
-              <div className="text-2xl font-serif font-medium text-foreground mb-2">
-                1:00
-              </div>
-              <p className="text-sm text-muted-foreground font-sans">Timer</p>
+            <div className="text-center">
+              <div className="text-2xl font-serif font-medium text-foreground mb-1">1:00</div>
+              <p className="text-xs text-muted-foreground font-sans uppercase tracking-widest">Time Limit</p>
             </div>
-
-            <button
-              onClick={startLemon}
-              className="w-full py-3 rounded-full font-sans font-semibold text-sm btn-press transition-colors bg-yellow-500 hover:bg-yellow-600 text-white"
-            >
-              Start Lemon
-            </button>
           </div>
 
-          {/* Topic Score */}
-          <div className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-8">
-            <div className="flex items-center gap-3 mb-6">
+          {/* Topic Speaking */}
+          <div
+            onClick={() => handleCardClick('topic')}
+            className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-8 text-center cursor-pointer card-hover btn-press relative overflow-hidden group"
+          >
+            <div className="flex items-center gap-3 mb-6 text-left">
               <div className="p-2.5 rounded-2xl bg-blue-100">
                 <Target size={20} className="text-blue-600" />
               </div>
               <div>
                 <h3 className="text-xl font-serif text-foreground mb-1">Topic Score</h3>
-                <p className="text-sm text-muted-foreground font-sans">2 minute speaking</p>
+                <p className="text-sm text-muted-foreground font-sans">2 minute critical thinking</p>
               </div>
             </div>
 
-            <div className="text-center mb-6">
-              <div className="text-lg font-serif text-foreground mb-2">
-                {topicPrompt?.text}
-              </div>
-              <div className="text-xs text-muted-foreground font-sans">
-                {topicPrompt?.category} • {topicPrompt?.difficulty}
-              </div>
+            <div className="py-8 bg-blue-50/50 rounded-2xl mb-4 border border-blue-100 flex items-center justify-center gap-2">
+              <Sparkles size={20} className="text-blue-500 opacity-60" />
+              <p className="text-sm text-blue-800 font-sans font-medium italic">Random topic challenge</p>
             </div>
 
-            <div className="text-center mb-4">
-              <div className="text-2xl font-serif font-medium text-foreground mb-2">
-                2:00
-              </div>
-              <p className="text-sm text-muted-foreground font-sans">Timer</p>
+            <div className="text-center">
+              <div className="text-2xl font-serif font-medium text-foreground mb-1">2:00</div>
+              <p className="text-xs text-muted-foreground font-sans uppercase tracking-widest">Time Limit</p>
             </div>
-
-            <button
-              onClick={startTopic}
-              className="w-full py-3 rounded-full font-sans font-semibold text-sm btn-press transition-colors bg-blue-500 hover:bg-blue-600 text-white"
-            >
-              Start Topic
-            </button>
           </div>
         </div>
       </div>

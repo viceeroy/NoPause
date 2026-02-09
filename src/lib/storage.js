@@ -31,6 +31,18 @@ export const storage = {
     localStorage.setItem(SESSIONS_KEY, JSON.stringify(filtered));
   },
 
+  deleteLemonScore(sessionId) {
+    const scores = this.getLemonScores();
+    const filtered = scores.filter(s => s.id !== sessionId);
+    localStorage.setItem(LEMON_SCORES_KEY, JSON.stringify(filtered));
+  },
+
+  deleteTopicScore(sessionId) {
+    const scores = this.getTopicScores();
+    const filtered = scores.filter(s => s.id !== sessionId);
+    localStorage.setItem(TOPIC_SCORES_KEY, JSON.stringify(filtered));
+  },
+
   clearSessions() {
     localStorage.removeItem(SESSIONS_KEY);
   },
@@ -88,9 +100,13 @@ export const storage = {
   // Stats
   getStats() {
     const sessions = this.getSessions();
+    const lemonScores = this.getLemonScores();
+    const topicScores = this.getTopicScores();
     const streak = this.getStreak();
 
-    if (sessions.length === 0) {
+    const allSessions = [...sessions, ...lemonScores, ...topicScores];
+
+    if (allSessions.length === 0) {
       return {
         totalSessions: 0,
         totalPracticeTime: 0,
@@ -102,16 +118,21 @@ export const storage = {
       };
     }
 
-    const totalPracticeTime = sessions.reduce((sum, s) => sum + s.duration, 0);
-    const avgScore = Math.round(sessions.reduce((sum, s) => sum + (s.hesitation_score || s.flowScore || 0), 0) / sessions.length);
-    const bestScore = Math.max(...sessions.map(s => s.hesitation_score || s.flowScore || 0));
-    const recentTrend = sessions.slice(0, 10).reverse().map(s => ({
-      score: s.hesitation_score || s.flowScore || 0,
-      date: s.created_at,
-    }));
+    const totalPracticeTime = allSessions.reduce((sum, s) => sum + (s.duration || s.totalSessionTime || 0), 0);
+    const avgScore = Math.round(sessions.reduce((sum, s) => sum + (s.hesitation_score || s.flowScore || 0), 0) / (sessions.length || 1));
+    const bestScore = Math.max(...allSessions.map(s => s.hesitation_score || s.flowScore || 0));
+
+    const recentTrend = allSessions
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 10)
+      .reverse()
+      .map(s => ({
+        score: s.hesitation_score || s.flowScore || 0,
+        date: s.created_at,
+      }));
 
     return {
-      totalSessions: sessions.length,
+      totalSessions: allSessions.length,
       totalPracticeTime,
       avgScore,
       bestScore,

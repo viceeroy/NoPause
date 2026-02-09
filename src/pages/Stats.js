@@ -20,9 +20,20 @@ export default function Stats() {
     setStats(storage.getStats());
   }, []);
 
-  const handleDelete = (id) => {
-    storage.deleteSession(id);
+  const handleDelete = (id, mode) => {
+    if (mode === 'lemon') {
+      storage.deleteLemonScore(id);
+    } else if (mode === 'topic') {
+      storage.deleteTopicScore(id);
+    } else {
+      storage.deleteSession(id);
+    }
+
+    // Refresh all data
     setSessions(storage.getSessions());
+    setLemonScores(storage.getLemonScores());
+    setTopicScores(storage.getTopicScores());
+    setStats(storage.getStats());
   };
 
   const formatTime = (secs) => {
@@ -93,18 +104,11 @@ export default function Stats() {
             </div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-serif font-medium text-white mb-2">
+            <div className="text-4xl font-serif font-bold text-white mb-1">
               {storage.calculateOverallFlowScore()}%
             </div>
-            {/* Progress Bar */}
-            <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden mb-2">
-              <div
-                className="h-full bg-white rounded-full"
-                style={{ width: `${storage.calculateOverallFlowScore()}%` }}
-              />
-            </div>
-            <div className="text-sm text-sage-100 font-sans">
-              Flow Score
+            <div className="text-sm text-sage-100 font-sans font-medium uppercase tracking-widest opacity-80">
+              Overall Flow
             </div>
           </div>
         </div>
@@ -121,20 +125,11 @@ export default function Stats() {
             </div>
           </div>
           <div className="text-center">
-            <div
-              className="text-3xl font-serif font-medium text-white mb-2"
-            >
-              {stats?.avgScore ? `${stats.avgScore}%` : '-'}
+            <div className="text-4xl font-serif font-bold text-white mb-1">
+              {stats?.totalSessions > 0 ? `${stats.avgScore}%` : '-'}
             </div>
-            {/* Progress Bar */}
-            <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden mb-2">
-              <div
-                className="h-full bg-white rounded-full"
-                style={{ width: `${stats?.avgScore || 0}%` }}
-              />
-            </div>
-            <div className="text-sm text-terracotta-100 font-sans">
-              Flow Score
+            <div className="text-sm text-terracotta-100 font-sans font-medium uppercase tracking-widest opacity-80">
+              Free Speak
             </div>
           </div>
         </div>
@@ -155,20 +150,11 @@ export default function Stats() {
               const avg = lemonScores.length > 0 ? Math.round(lemonScores.reduce((sum, s) => sum + (s.flowScore || 0), 0) / lemonScores.length) : null;
               return (
                 <>
-                  <div
-                    className="text-3xl font-serif font-medium text-white mb-2"
-                  >
+                  <div className="text-4xl font-serif font-bold text-white mb-1">
                     {avg !== null ? `${avg}%` : '-'}
                   </div>
-                  {/* Progress Bar */}
-                  <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden mb-2">
-                    <div
-                      className="h-full bg-white rounded-full"
-                      style={{ width: `${avg || 0}%` }}
-                    />
-                  </div>
-                  <div className="text-sm text-yellow-100 font-sans">
-                    Flow Score
+                  <div className="text-sm text-yellow-100 font-sans font-medium uppercase tracking-widest opacity-80">
+                    Lemon Average
                   </div>
                 </>
               );
@@ -192,20 +178,11 @@ export default function Stats() {
               const avg = topicScores.length > 0 ? Math.round(topicScores.reduce((sum, s) => sum + (s.flowScore || 0), 0) / topicScores.length) : null;
               return (
                 <>
-                  <div
-                    className="text-3xl font-serif font-medium text-white mb-2"
-                  >
+                  <div className="text-4xl font-serif font-bold text-white mb-1">
                     {avg !== null ? `${avg}%` : '-'}
                   </div>
-                  {/* Progress Bar */}
-                  <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden mb-2">
-                    <div
-                      className="h-full bg-white rounded-full"
-                      style={{ width: `${avg || 0}%` }}
-                    />
-                  </div>
-                  <div className="text-sm text-blue-100 font-sans">
-                    Flow Score
+                  <div className="text-sm text-blue-100 font-sans font-medium uppercase tracking-widest opacity-80">
+                    Topic Average
                   </div>
                 </>
               );
@@ -303,14 +280,14 @@ export default function Stats() {
         </div>
       )}
 
-      {sessions.length === 0 ? (
+      {allSessionsCombined.length === 0 ? (
         <div data-testid="empty-history" className="text-center py-20">
           <Clock size={48} className="text-sand-400 mx-auto mb-4" />
           <p className="text-lg font-serif text-foreground mb-2">No sessions yet</p>
           <p className="text-sm text-muted-foreground font-sans mb-6">Complete your first practice session to see results here.</p>
           <button
             data-testid="start-first-session-btn"
-            onClick={() => navigate('/practice')}
+            onClick={() => navigate('/')}
             className="px-8 py-3 rounded-full bg-sage-500 text-white font-sans font-semibold text-sm btn-press hover:bg-sage-600" style={{ transition: 'background-color 0.2s ease' }}
           >
             Start Practicing
@@ -318,20 +295,24 @@ export default function Stats() {
         </div>
       ) : (
         <>
-
           {/* Sessions List */}
           <div className="stagger-children space-y-3">
-            {sessions.map((session) => {
-              const score = session.hesitation_score || session.flowScore || 0;
-              const scoreLabel = AudioAnalyzer.getScoreLabel(score);
+            {[...allSessionsCombined].reverse().map((session) => {
+              const score = session.flowScore || session.hesitation_score || 0;
+              const displayMode = session.mode === 'free-speak' || session.mode === 'free' ? 'Free' : (session.mode === 'lemon' ? 'Lemon' : 'Topic');
+              const sessionTitle = session.word || session.topic || (session.mode === 'free-speak' || session.mode === 'free' ? 'Continuous Talk' : 'Speaking Practice');
+
               return (
                 <div
-                  key={session.id}
+                  key={session.id || session.created_at}
                   data-testid={`session-${session.id}`}
                   className="rounded-2xl bg-white border border-sand-300/50 shadow-card p-5 flex items-center gap-5 card-hover"
                 >
                   {/* Score Badge */}
-                  <div className="flex-shrink-0 w-14 h-14 rounded-2xl flex flex-col items-center justify-center bg-sand-100">
+                  <div className={cn(
+                    "flex-shrink-0 w-14 h-14 rounded-2xl flex flex-col items-center justify-center",
+                    session.mode === 'lemon' ? "bg-yellow-50" : (session.mode === 'topic' ? "bg-blue-50" : "bg-sand-100")
+                  )}>
                     <span className="text-lg font-serif font-medium text-foreground">{score}</span>
                     <span className="text-[9px] font-sans font-semibold uppercase text-muted-foreground">%</span>
                   </div>
@@ -339,16 +320,19 @@ export default function Stats() {
                   {/* Details */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-sans font-semibold text-foreground">{scoreLabel}</span>
-                      <span className="text-xs text-muted-foreground font-sans">{formatTime(session.duration)}</span>
+                      <span className={cn(
+                        "text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-md",
+                        session.mode === 'lemon' ? "bg-yellow-100 text-yellow-700" :
+                          (session.mode === 'topic' ? "bg-blue-100 text-blue-700" : "bg-sand-200 text-sand-700")
+                      )}>
+                        {displayMode}
+                      </span>
+                      <span className="text-sm font-sans font-semibold text-foreground truncate">{sessionTitle}</span>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground font-sans">
-                      <span>{session.hesitation_count} hesitation{session.hesitation_count !== 1 ? 's' : ''}</span>
-                      <span>{session.silence_time}s silence</span>
+                      <span>{formatTime(session.totalSessionTime || session.duration || 0)} duration</span>
+                      <span>{session.hesitationCount || session.hesitation_count || 0} pauses</span>
                     </div>
-                    {session.prompt && (
-                      <p className="text-xs text-muted-foreground/70 font-sans mt-1 truncate">{session.prompt}</p>
-                    )}
                   </div>
 
                   {/* Date & Actions */}
@@ -356,8 +340,8 @@ export default function Stats() {
                     <span className="text-xs text-muted-foreground font-sans">{formatDate(session.created_at)}</span>
                     <button
                       data-testid={`delete-session-${session.id}`}
-                      onClick={() => handleDelete(session.id)}
-                      className="p-1.5 rounded-lg hover:bg-sand-200 text-muted-foreground/50 hover:text-terracotta-400 btn-press" style={{ transition: 'color 0.2s ease, background-color 0.2s ease' }}
+                      onClick={() => handleDelete(session.id, session.mode)}
+                      className="p-1.5 rounded-lg hover:bg-sand-200 text-muted-foreground/50 hover:text-terracotta-400 btn-press"
                     >
                       <Trash2 size={14} />
                     </button>

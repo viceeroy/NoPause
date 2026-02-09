@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { Mic, MicOff, Square, Play, ChevronLeft, AlertTriangle, Timer, Zap, Volume2, FileText } from 'lucide-react';
+import { Mic, MicOff, Square, Play, ChevronLeft, AlertTriangle, Timer, Zap, Volume2, FileText, Sparkles } from 'lucide-react';
 import { AudioAnalyzer } from '@/lib/audioAnalyzer';
 import { AudioVisualizer } from '@/components/ui/AudioVisualizer';
 import { VoiceVisualizer } from '@/components/ui/VoiceVisualizer';
@@ -8,9 +8,6 @@ import { storage } from '@/lib/storage';
 import { SPEAKING_PROMPTS, RANDOM_WORDS } from '@/lib/prompts';
 import { cn } from '@/lib/utils';
 
-const generateId = () => {
-  return 'sess_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
-};
 
 export default function Practice() {
   const navigate = useNavigate();
@@ -46,12 +43,13 @@ export default function Practice() {
 
   // Initialize content based on mode
   useEffect(() => {
-    if (mode === 'lemon' && word) {
-      setLemonWord(word);
+    if (mode === 'lemon') {
+      const initialWord = word || RANDOM_WORDS[Math.floor(Math.random() * RANDOM_WORDS.length)];
+      setLemonWord(initialWord);
       setTimeLeft(60);
-    } else if (mode === 'topic' && promptId) {
-      const prompt = SPEAKING_PROMPTS.find(p => p.id === promptId);
-      setTopicPrompt(prompt);
+    } else if (mode === 'topic') {
+      const initialPrompt = promptId ? SPEAKING_PROMPTS.find(p => p.id === promptId) : SPEAKING_PROMPTS[Math.floor(Math.random() * SPEAKING_PROMPTS.length)];
+      setTopicPrompt(initialPrompt);
       setTimeLeft(120);
     } else if (mode === 'free') {
       setTimeLeft(0); // No time limit
@@ -87,18 +85,31 @@ export default function Practice() {
 
       // Save based on mode
       if (mode === 'free') {
-        storage.saveLemonScore(sessionResult);
+        storage.saveSession({
+          ...sessionResult,
+          duration: duration,
+          hesitationCount: results.hesitationCount,
+          hesitation_count: results.hesitationCount,
+          silenceTime: Math.round(results.totalSilenceTime / 1000),
+          silence_time: Math.round(results.totalSilenceTime / 1000),
+          duration: duration
+        });
       } else if (mode === 'lemon') {
         storage.saveLemonScore({
           ...sessionResult,
-          word: lemonWord
+          word: lemonWord,
+          hesitation_count: results.hesitationCount,
+          silence_time: Math.round(results.totalSilenceTime / 1000),
+          duration: duration
         });
       } else if (mode === 'topic') {
         storage.saveTopicScore({
           ...sessionResult,
-          correctnessScore: Math.max(0, Math.min(100, flowScore + Math.random() * 10 - 5)),
           topic: topicPrompt.text,
-          difficulty: topicPrompt.difficulty
+          difficulty: topicPrompt.difficulty,
+          hesitation_count: results.hesitationCount,
+          silence_time: Math.round(results.totalSilenceTime / 1000),
+          duration: duration
         });
       }
 
@@ -139,19 +150,18 @@ export default function Practice() {
     }
   }, [mode, lemonWord, topicPrompt, stopRecording]);
 
-  // Start recording
+  // Start recording process with countdown
   const handleStart = useCallback(async () => {
     try {
-      setState('countdown');
       setLastResults(null);
 
       // Initialize audio analyzer
       const analyzer = new AudioAnalyzer({
-        silenceThreshold: 0.01, // Lower threshold for better sensitivity
-        hesitationMinDuration: 300, // Slightly shorter hesitation detection
+        silenceThreshold: 0.01,
+        hesitationMinDuration: 300,
         onData: (data) => {
           setAudioData(data);
-          if (data.rms > 0.01) { // Lower threshold for sound detection
+          if (data.rms > 0.01) {
             soundDetectedRef.current = true;
           }
         }
@@ -159,6 +169,7 @@ export default function Practice() {
 
       analyzerRef.current = analyzer;
 
+      setState('countdown');
       // Countdown
       let count = 3;
       setCountdown(count);
@@ -172,23 +183,20 @@ export default function Practice() {
           startRecording();
         }
       }, 1000);
-
     } catch (error) {
       console.error('Error starting recording:', error);
       setState('setup');
     }
   }, [startRecording]);
 
-  // Auto-start countdown for free-speaking route
-  useEffect(() => {
-    if (isFreeSpeakingRoute && state === 'setup') {
-      // Small delay to ensure component is mounted
-      const timer = setTimeout(() => {
-        handleStart();
-      }, 100);
-      return () => clearTimeout(timer);
+  const handleRandomPrompt = () => {
+    if (mode === 'lemon') {
+      setLemonWord(RANDOM_WORDS[Math.floor(Math.random() * RANDOM_WORDS.length)]);
+    } else if (mode === 'topic') {
+      setTopicPrompt(SPEAKING_PROMPTS[Math.floor(Math.random() * SPEAKING_PROMPTS.length)]);
     }
-  }, [isFreeSpeakingRoute, state, handleStart]);
+  };
+
 
   // Check mic permission and transcript support
   useEffect(() => {
@@ -284,126 +292,182 @@ export default function Practice() {
         Back
       </button>
 
-      <h1 className="text-4xl md:text-5xl font-serif font-medium text-foreground mb-3">{getModeTitle()}</h1>
-      <p className="text-base text-muted-foreground font-sans mb-8">{getModeDescription()}</p>
+      {state !== 'recording' && (
+        <>
+          <h1 className="text-4xl md:text-5xl font-serif font-medium text-foreground mb-3">{getModeTitle()}</h1>
+          <p className="text-base text-muted-foreground font-sans mb-12">{getModeDescription()}</p>
+        </>
+      )}
 
-      {state === 'setup' && (
-        <div className="text-center">
+      {(state === 'setup' || state === 'countdown') && (
+        <div className="text-center py-10">
           {micPermission === 'denied' && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl">
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl w-full max-w-md mx-auto">
               <div className="flex items-center gap-2 text-red-600 mb-2">
                 <AlertTriangle size={16} />
                 <span className="font-sans font-semibold text-sm">Microphone access denied</span>
               </div>
               <p className="text-red-600 text-sm font-sans">
-                Please allow microphone access in your browser settings to use this feature.
+                Please allow microphone access to practice.
               </p>
             </div>
           )}
 
-          <div className="mb-8">
-            <div className="text-6xl font-serif font-medium text-foreground mb-2">
-              {formatTime(timeLeft)}
-            </div>
-            <p className="text-muted-foreground font-sans">
-              {mode === 'free' ? 'No time limit' : 'Time remaining'}
-            </p>
+          <div className={cn("mb-12 transition-all duration-500", state === 'countdown' && "opacity-30 scale-95 blur-[2px]")}>
+            {mode === 'lemon' && (
+              <div className="mb-8 p-10 bg-yellow-50 border border-yellow-200 rounded-[40px] shadow-sm">
+                <p className="text-xs text-yellow-600 uppercase tracking-widest font-bold mb-4">You will speak about:</p>
+                <div className="text-5xl md:text-7xl font-serif font-bold text-yellow-900 mb-6">
+                  {lemonWord}
+                </div>
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-100 text-yellow-700 rounded-full text-sm font-sans font-bold">
+                  <Timer size={16} />
+                  60 Seconds Target
+                </div>
+              </div>
+            )}
+
+            {mode === 'topic' && topicPrompt && (
+              <div className="mb-8 p-10 bg-blue-50 border border-blue-200 rounded-[40px] shadow-sm">
+                <p className="text-xs text-blue-600 uppercase tracking-widest font-bold mb-4">You will speak about:</p>
+                <div className="text-2xl md:text-3xl font-serif font-medium text-blue-900 leading-snug mb-6">
+                  {topicPrompt.text}
+                </div>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-sans font-bold uppercase tracking-wider">{topicPrompt.category}</span>
+                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-sans font-bold uppercase tracking-wider">{topicPrompt.difficulty}</span>
+                  <span className="px-3 py-1 bg-blue-600 text-white rounded-full text-[10px] font-sans font-bold uppercase tracking-wider flex items-center gap-1">
+                    <Timer size={12} />
+                    120s
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {mode === 'free' && (
+              <div className="mb-8 py-10">
+                <div className="w-24 h-24 bg-sage-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Mic size={40} className="text-sage-500" />
+                </div>
+                <p className="text-xl font-serif text-foreground max-w-md mx-auto leading-relaxed">
+                  Speak freely without time limits. Focus on continuous speech and minimizing pauses.
+                </p>
+              </div>
+            )}
           </div>
 
-          {mode === 'lemon' && (
-            <div className="mb-8 p-6 bg-yellow-50 border border-yellow-200 rounded-3xl">
-              <div className="text-2xl font-serif font-medium text-yellow-800 mb-2">
-                {lemonWord}
-              </div>
-              <p className="text-yellow-600 font-sans text-sm">Your random word</p>
-            </div>
-          )}
+          <div className="relative min-h-[100px] flex items-center justify-center">
+            {state === 'setup' ? (
+              <div className="flex flex-col md:flex-row items-center justify-center gap-4 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {(mode === 'lemon' || mode === 'topic') && (
+                  <button
+                    onClick={handleRandomPrompt}
+                    className="w-full md:w-auto px-8 py-4 rounded-full bg-white border border-sand-300 hover:bg-sand-50 text-foreground font-sans font-bold btn-press flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    <Sparkles size={18} className="text-sage-500" />
+                    Randomize
+                  </button>
+                )}
 
-          {mode === 'topic' && topicPrompt && (
-            <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-3xl">
-              <div className="text-lg font-serif text-blue-800 mb-2">
-                {topicPrompt.text}
+                <button
+                  data-testid="start-recording-btn"
+                  onClick={handleStart}
+                  disabled={micPermission === 'denied'}
+                  className="w-full md:w-auto px-10 py-4 rounded-full bg-sage-600 hover:bg-sage-700 disabled:bg-sand-300 text-white font-sans font-bold btn-press flex items-center justify-center gap-2 shadow-md shadow-sage-200"
+                >
+                  <Mic size={20} />
+                  Start Speaking
+                </button>
               </div>
-              <div className="flex gap-2 text-blue-600 font-sans text-xs">
-                <span className="px-2 py-1 bg-blue-100 rounded-full">{topicPrompt.category}</span>
-                <span className="px-2 py-1 bg-blue-100 rounded-full">{topicPrompt.difficulty}</span>
+            ) : (
+              <div className="text-9xl font-serif font-bold text-sage-600 animate-in zoom-in duration-300">
+                {countdown}
               </div>
-            </div>
-          )}
-
-          {!transcriptSupported && (
-            <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-3xl text-left max-w-md mx-auto">
-              <div className="flex items-center gap-2 text-blue-800 mb-2">
-                <FileText size={18} />
-                <span className="font-serif font-medium">Transcript not supported</span>
-              </div>
-              <p className="text-blue-600 font-sans text-sm leading-relaxed">
-                Your current browser doesn't support live transcription. For the best experience with transcripts, we recommend using <strong>Google Chrome</strong> or <strong>Microsoft Edge</strong>.
-              </p>
-            </div>
-          )}
-
-          <button
-            data-testid="start-recording-btn"
-            onClick={handleStart}
-            disabled={micPermission === 'denied'}
-            className="w-full md:w-auto px-8 py-4 rounded-full bg-sage-500 hover:bg-sage-600 disabled:bg-sand-300 text-white font-sans font-semibold btn-press transition-colors inline-flex items-center justify-center"
-          >
-            <Mic size={20} className="mr-2" />
-            Start Recording
-          </button>
+            )}
+          </div>
         </div>
       )}
 
-      {state === 'countdown' && (
-        <div className="text-center">
-          <div className="text-8xl font-serif font-medium text-foreground mb-4">
-            {countdown}
-          </div>
-          <p className="text-muted-foreground font-sans">Get ready...</p>
-        </div>
-      )}
 
       {state === 'recording' && (
-        <div className="text-center">
-          <div className="mb-8">
-            <div className="text-6xl font-serif font-medium text-foreground mb-2">
-              {mode === 'free' ? formatTime(Math.floor((Date.now() - sessionDataRef.current?.startTime) / 1000)) : formatTime(timeLeft)}
-            </div>
-            <div className="flex items-center justify-center gap-2">
-              <div className={cn("w-2 h-2 rounded-full", isListening ? "bg-red-500 animate-pulse" : "bg-gray-300")}></div>
-              <p className="text-muted-foreground font-sans">
-                {soundDetectedRef.current ? "Listening..." : "Waiting for sound..."}
+        <div className="flex flex-col items-center max-w-2xl mx-auto animate-in fade-in duration-700">
+          {/* Active Prompt Card */}
+          <div className="w-full mb-10">
+            {mode === 'lemon' && (
+              <div className="p-10 bg-yellow-50/50 border-2 border-yellow-200 rounded-[40px] shadow-lg shadow-yellow-100/30 relative overflow-hidden backdrop-blur-sm">
+                <div className="absolute top-0 right-0 p-6">
+                  <div className="flex items-center gap-2 px-4 py-1.5 bg-yellow-400 text-yellow-900 rounded-full text-sm font-bold font-sans shadow-sm">
+                    <Timer size={16} className="animate-pulse" />
+                    {formatTime(timeLeft)}
+                  </div>
+                </div>
+                <p className="text-[10px] text-yellow-600 uppercase tracking-widest font-black mb-3">Topic focus:</p>
+                <div className="text-4xl md:text-5xl font-serif font-bold text-yellow-900">
+                  {lemonWord}
+                </div>
+              </div>
+            )}
+
+            {mode === 'topic' && topicPrompt && (
+              <div className="p-10 bg-blue-50/50 border-2 border-blue-200 rounded-[40px] shadow-lg shadow-blue-100/30 relative overflow-hidden backdrop-blur-sm">
+                <div className="absolute top-0 right-0 p-6">
+                  <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-600 text-white rounded-full text-sm font-bold font-sans shadow-sm">
+                    <Timer size={16} className="animate-pulse" />
+                    {formatTime(timeLeft)}
+                  </div>
+                </div>
+                <p className="text-[10px] text-blue-600 uppercase tracking-widest font-black mb-3">Responding to:</p>
+                <div className="text-xl md:text-2xl font-serif font-medium text-blue-900 leading-snug">
+                  {topicPrompt.text}
+                </div>
+              </div>
+            )}
+
+            {mode === 'free' && (
+              <div className="p-10 bg-sage-50/50 border-2 border-sage-200 rounded-[40px] shadow-lg shadow-sage-100/30 relative overflow-hidden backdrop-blur-sm text-center">
+                <div className="absolute top-0 right-0 p-6">
+                  <div className="flex items-center gap-2 px-4 py-1.5 bg-sage-600 text-white rounded-full text-sm font-bold font-sans shadow-sm">
+                    <Timer size={16} className="animate-pulse" />
+                    {formatTime(sessionDataRef.current?.startTime ? Math.floor((Date.now() - sessionDataRef.current.startTime) / 1000) : 0)}
+                  </div>
+                </div>
+                <p className="text-[10px] text-sage-600 uppercase tracking-widest font-black mb-3">Free Speak</p>
+                <p className="text-xl font-serif text-sage-900 italic">"Maintain your flow and speak freely..."</p>
+              </div>
+            )}
+          </div>
+
+          {/* Audio Visualization - Focused */}
+          <div className="w-full mb-12">
+            <div className="flex items-center justify-center gap-2 mb-6">
+              <div className={cn("w-2 h-2 rounded-full", isListening ? "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]" : "bg-gray-300")}></div>
+              <p className="text-[10px] font-black text-muted-foreground font-sans uppercase tracking-[0.2em]">
+                {soundDetectedRef.current ? "Analyzing Speech" : "Waiting for sound"}
               </p>
+            </div>
+
+            <div className="h-44 flex items-center justify-center bg-white border border-sand-200 rounded-[50px] shadow-inner-lg overflow-hidden">
+              {audioData ? (
+                <VoiceVisualizer
+                  frequencyData={audioData.frequencyData}
+                  volume={audioData.volume}
+                  isSilent={audioData.isSilent}
+                  isRecording={true}
+                />
+              ) : (
+                <Mic size={40} className="text-sand-200 animate-pulse" />
+              )}
             </div>
           </div>
 
-          {audioData && (
-            <div className="mb-8 relative h-48 flex items-center justify-center">
-              <VoiceVisualizer
-                frequencyData={audioData.frequencyData}
-                volume={audioData.volume}
-                isSilent={audioData.isSilent}
-                isRecording={true}
-              />
-              {!soundDetectedRef.current && (
-                <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-[1px] rounded-3xl">
-                  <p className="text-sage-600 font-sans font-medium flex items-center gap-2">
-                    <Mic size={16} />
-                    Try speaking now
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
+          {/* Finish Button - Bottom Anchored Design */}
           <button
             data-testid="stop-recording-btn"
             onClick={handleStop}
-            className="w-full md:w-auto px-8 py-4 rounded-full bg-red-500 hover:bg-red-600 text-white font-sans font-semibold btn-press transition-colors inline-flex items-center justify-center"
+            className="w-full md:w-auto px-16 py-5 rounded-full bg-red-500 hover:bg-red-600 text-white font-sans font-black text-lg btn-press shadow-2xl shadow-red-200 flex items-center justify-center gap-4 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
-            <Square size={20} className="mr-2" />
-            Stop Practice
+            <Square size={20} fill="white" className="rounded-sm" />
+            Finish & View Results
           </button>
         </div>
       )}
