@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mic, Flame, Target, Clock, TrendingUp, Shield, Zap } from 'lucide-react';
+import { Mic, Flame, Target, Clock, TrendingUp, Shield, Zap, Sparkles, Timer } from 'lucide-react';
 import { storage } from '@/lib/storage';
+import { SPEAKING_PROMPTS, RANDOM_WORDS } from '@/lib/prompts';
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 
 const StatCard = ({ icon: Icon, label, value, sub, className, testId }) => (
@@ -20,10 +21,31 @@ const StatCard = ({ icon: Icon, label, value, sub, className, testId }) => (
 export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
+  
+  // Content for Practice page
+  const [lemonWord, setLemonWord] = useState('');
+  const [topicPrompt, setTopicPrompt] = useState(null);
 
   useEffect(() => {
     setStats(storage.getStats());
+    
+    // Initialize random content for display
+    setLemonWord(RANDOM_WORDS[Math.floor(Math.random() * RANDOM_WORDS.length)]);
+    setTopicPrompt(SPEAKING_PROMPTS[Math.floor(Math.random() * SPEAKING_PROMPTS.length)]);
   }, []);
+
+  // Navigation handlers
+  const startFreeSpeak = () => {
+    navigate('/practice/free-speaking');
+  };
+
+  const startLemon = () => {
+    navigate(`/practice?mode=lemon&word=${encodeURIComponent(lemonWord)}`);
+  };
+
+  const startTopic = () => {
+    navigate(`/practice?mode=topic&prompt=${encodeURIComponent(topicPrompt.id)}`);
+  };
 
   const formatTime = (seconds) => {
     if (seconds < 60) return `${seconds}s`;
@@ -37,42 +59,131 @@ export default function Dashboard() {
   return (
     <div data-testid="dashboard-page" className="min-h-screen pb-28 px-6 md:px-12 lg:px-20 pt-8 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-start justify-between mb-12">
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-sage-100 text-sage-600 rounded-full text-xs font-sans font-semibold">
-              <Shield size={12} />
-              Offline & Private
-            </div>
-          </div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-medium tracking-tight text-foreground">
-            FluencyFlow
+      <div className="flex items-start justify-between mb-16">
+        <div className="text-left">
+          <h1 className="text-5xl md:text-6xl font-serif font-medium text-foreground mb-4">
+            No Pause
           </h1>
           <p className="text-base md:text-lg text-muted-foreground mt-3 font-sans leading-relaxed max-w-lg">
             Practice speaking with confidence. Your voice stays on your device.
           </p>
         </div>
+        <div className="flex justify-center">
+          <div className="flex items-center gap-2 px-4 py-2 bg-sage-100 text-sage-600 rounded-full text-sm font-sans font-semibold">
+            <Shield size={14} />
+            Offline & Private
+          </div>
+        </div>
       </div>
 
-      {/* Bento Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {/* Quick Start - Large Card */}
-        <button
-          data-testid="quick-start-btn"
-          onClick={() => navigate('/practice')}
-          className="col-span-2 row-span-2 relative overflow-hidden rounded-3xl bg-sage-500 text-white p-8 md:p-10 card-hover btn-press group"
-        >
-          <div className="relative z-10">
-            <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-6 group-hover:scale-110" style={{ transition: 'transform 0.3s ease' }}>
-              <Mic size={28} className="text-white" />
+      {/* Speaking Area */}
+      <div className="mb-16">
+        {/* Free Speaking Block */}
+        <div className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-8 mb-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2.5 rounded-2xl bg-sage-100">
+              <Mic size={20} className="text-sage-600" />
             </div>
-            <h2 className="text-3xl md:text-4xl font-serif font-medium mb-2 text-left">Start Speaking</h2>
-            <p className="text-sage-100 text-left font-sans text-sm">Begin a new practice session</p>
+            <div>
+              <h3 className="text-xl font-serif text-foreground mb-1">Free Speaking</h3>
+              <p className="text-sm text-muted-foreground font-sans">Talk about anything, no timer</p>
+            </div>
           </div>
-          <div className="absolute -right-8 -bottom-8 w-40 h-40 rounded-full bg-white/10 animate-breathe" />
-          <div className="absolute right-12 bottom-12 w-20 h-20 rounded-full bg-white/5 animate-breathe" style={{ animationDelay: '1s' }} />
-        </button>
+          
+          <div className="text-center mb-6">
+            <div className="flex justify-center mb-4">
+              <div className="relative w-24 h-24 rounded-full flex items-center justify-center bg-sage-100">
+                <div className="absolute inset-0 rounded-full animate-pulse bg-sage-400 opacity-20"></div>
+                <Mic size={40} className="text-sage-600 relative z-10" />
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground font-sans">Practice speaking freely without time limits</p>
+          </div>
+          
+          <button
+            onClick={startFreeSpeak}
+            className="w-full py-3 rounded-full font-sans font-semibold text-sm btn-press transition-colors bg-sage-500 hover:bg-sage-600 text-white"
+          >
+            Start Free Speak
+          </button>
+        </div>
 
+        {/* Side-by-side blocks */}
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Lemon Technique */}
+          <div className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2.5 rounded-2xl bg-yellow-100">
+                <Timer size={20} className="text-yellow-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-serif text-foreground mb-1">Lemon Technique</h3>
+                <p className="text-sm text-muted-foreground font-sans">1 minute speaking</p>
+              </div>
+            </div>
+            
+            <div className="text-center mb-6">
+              <div className="text-3xl font-serif font-medium text-foreground mb-2">
+                {lemonWord}
+              </div>
+              <p className="text-sm text-muted-foreground font-sans">Random word</p>
+            </div>
+            
+            <div className="text-center mb-4">
+              <div className="text-2xl font-serif font-medium text-foreground mb-2">
+                1:00
+              </div>
+              <p className="text-sm text-muted-foreground font-sans">Timer</p>
+            </div>
+            
+            <button
+              onClick={startLemon}
+              className="w-full py-3 rounded-full font-sans font-semibold text-sm btn-press transition-colors bg-yellow-500 hover:bg-yellow-600 text-white"
+            >
+              Start Lemon
+            </button>
+          </div>
+
+          {/* Topic Score */}
+          <div className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2.5 rounded-2xl bg-blue-100">
+                <Target size={20} className="text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-serif text-foreground mb-1">Topic Score</h3>
+                <p className="text-sm text-muted-foreground font-sans">2 minute speaking</p>
+              </div>
+            </div>
+            
+            <div className="text-center mb-6">
+              <div className="text-lg font-serif text-foreground mb-2">
+                {topicPrompt?.text}
+              </div>
+              <div className="text-xs text-muted-foreground font-sans">
+                {topicPrompt?.category} • {topicPrompt?.difficulty}
+              </div>
+            </div>
+            
+            <div className="text-center mb-4">
+              <div className="text-2xl font-serif font-medium text-foreground mb-2">
+                2:00
+              </div>
+              <p className="text-sm text-muted-foreground font-sans">Timer</p>
+            </div>
+            
+            <button
+              onClick={startTopic}
+              className="w-full py-3 rounded-full font-sans font-semibold text-sm btn-press transition-colors bg-blue-500 hover:bg-blue-600 text-white"
+            >
+              Start Topic
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Blocks - Moved Below Speaking Area */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {/* Streak */}
         <StatCard
           testId="streak-card"
@@ -157,10 +268,10 @@ export default function Dashboard() {
         </button>
         <button
           data-testid="view-history-btn"
-          onClick={() => navigate('/history')}
+          onClick={() => navigate('/stats')}
           className="rounded-2xl bg-white border border-sand-300/50 shadow-card p-5 text-left card-hover btn-press"
         >
-          <p className="font-serif text-lg text-foreground mb-1">View History</p>
+          <p className="font-serif text-lg text-foreground mb-1">View Stats</p>
           <p className="text-sm text-muted-foreground font-sans">Track your progress</p>
         </button>
       </div>

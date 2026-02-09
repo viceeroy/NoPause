@@ -3,6 +3,8 @@
 const SESSIONS_KEY = 'fluencyflow_sessions';
 const PREFS_KEY = 'fluencyflow_preferences';
 const STREAK_KEY = 'fluencyflow_streak';
+const LEMON_SCORES_KEY = 'fluencyflow_lemon_scores';
+const TOPIC_SCORES_KEY = 'fluencyflow_topic_scores';
 
 export const storage = {
   // Sessions
@@ -125,7 +127,80 @@ export const storage = {
       sessions: this.getSessions(),
       preferences: this.getPreferences(),
       streak: this.getStreak(),
+      lemonScores: this.getLemonScores(),
+      topicScores: this.getTopicScores(),
       exportedAt: new Date().toISOString(),
     };
+  },
+
+  // Lemon Score (1-minute random speaking)
+  getLemonScores() {
+    try {
+      const data = localStorage.getItem(LEMON_SCORES_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveLemonScore(score) {
+    const scores = this.getLemonScores();
+    scores.unshift({
+      ...score,
+      id: 'lemon_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9),
+      created_at: new Date().toISOString(),
+    });
+    localStorage.setItem(LEMON_SCORES_KEY, JSON.stringify(scores));
+    return score;
+  },
+
+  // Topic Score (2-minute topic speaking)
+  getTopicScores() {
+    try {
+      const data = localStorage.getItem(TOPIC_SCORES_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveTopicScore(score) {
+    const scores = this.getTopicScores();
+    scores.unshift({
+      ...score,
+      id: 'topic_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9),
+      created_at: new Date().toISOString(),
+    });
+    localStorage.setItem(TOPIC_SCORES_KEY, JSON.stringify(scores));
+    return score;
+  },
+
+  // Overall Flow Score calculation
+  calculateOverallFlowScore() {
+    const sessions = this.getSessions();
+    const lemonScores = this.getLemonScores();
+    const topicScores = this.getTopicScores();
+    
+    // Weight different exercise types
+    const sessionScores = sessions.map(s => s.hesitation_score || 0);
+    const lemonScoresValues = lemonScores.map(s => s.flowScore || 0);
+    const topicScoresValues = topicScores.map(s => s.flowScore || 0);
+    
+    const allScores = [...sessionScores, ...lemonScoresValues, ...topicScoresValues];
+    
+    if (allScores.length === 0) return 0;
+    
+    // Calculate weighted average (recent exercises weigh more)
+    const weightedSum = allScores.reduce((sum, score, index) => {
+      const weight = Math.max(0.5, 1 - (index / allScores.length) * 0.5);
+      return sum + (score * weight);
+    }, 0);
+    
+    const totalWeight = allScores.reduce((sum, score, index) => {
+      const weight = Math.max(0.5, 1 - (index / allScores.length) * 0.5);
+      return sum + weight;
+    }, 0);
+    
+    return Math.round(weightedSum / totalWeight);
   },
 };

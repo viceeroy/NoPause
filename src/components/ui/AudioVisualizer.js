@@ -71,6 +71,15 @@ export const AudioVisualizer = ({ waveformData, isRecording, isSilent, volume })
       ctx.quadraticCurveTo(x, y, x + radius, y);
       ctx.closePath();
       ctx.fill();
+
+      // Smooth rounded bars
+      ctx.beginPath();
+      ctx.moveTo(x + barWidth / 2, y);
+      ctx.lineTo(x + barWidth / 2, y + barHeight);
+      ctx.lineTo(x + barWidth / 2, y + barHeight);
+      ctx.lineTo(x + barWidth / 2, y);
+      ctx.closePath();
+      ctx.fill();
     }
   }, [waveformData, isRecording, isSilent, volume]);
 

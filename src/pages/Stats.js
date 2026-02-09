@@ -1,17 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Trash2, TrendingUp, Calendar } from 'lucide-react';
+import { Clock, Trash2, TrendingUp, Calendar, Timer, Target, BarChart3, Flame, Zap } from 'lucide-react';
 import { storage } from '@/lib/storage';
 import { AudioAnalyzer } from '@/lib/audioAnalyzer';
 import { LineChart, Line, AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { cn } from '@/lib/utils';
 
-export default function History() {
+export default function Stats() {
   const navigate = useNavigate();
   const [sessions, setSessions] = useState([]);
+  const [lemonScores, setLemonScores] = useState([]);
+  const [topicScores, setTopicScores] = useState([]);
+  const [stats, setStats] = useState(null);
 
   useEffect(() => {
     setSessions(storage.getSessions());
+    setLemonScores(storage.getLemonScores());
+    setTopicScores(storage.getTopicScores());
+    setStats(storage.getStats());
   }, []);
 
   const handleDelete = (id) => {
@@ -24,6 +30,26 @@ export default function History() {
     const s = secs % 60;
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
+
+  const formatDuration = (seconds) => {
+    if (seconds < 60) return `${seconds}s`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+  };
+
+  const StatCard = ({ icon: Icon, label, value, sub, className }) => (
+    <div className={`rounded-3xl p-6 ${className}`}>
+      <div className="flex items-start justify-between mb-4">
+        <div className="p-2.5 rounded-2xl bg-white/60">
+          <Icon size={20} className="text-sage-600" />
+        </div>
+      </div>
+      <p className="text-3xl font-serif font-medium text-foreground">{value}</p>
+      <p className="text-sm text-muted-foreground mt-1 font-sans">{label}</p>
+      {sub && <p className="text-xs text-muted-foreground/70 mt-0.5">{sub}</p>}
+    </div>
+  );
 
   const formatDate = (isoString) => {
     const d = new Date(isoString);
@@ -38,9 +64,113 @@ export default function History() {
   }));
 
   return (
-    <div data-testid="history-page" className="min-h-screen pb-28 px-6 md:px-12 lg:px-20 pt-8 max-w-4xl mx-auto">
-      <h1 className="text-4xl md:text-5xl font-serif font-medium text-foreground mb-2">History</h1>
-      <p className="text-base text-muted-foreground font-sans mb-10">Your speaking practice journey.</p>
+    <div data-testid="history-page" className="min-h-screen pb-28 px-6 md:px-12 lg:px-20 pt-8 max-w-6xl mx-auto">
+      <h1 className="text-4xl md:text-5xl font-serif font-medium text-foreground mb-2">Stats</h1>
+      <p className="text-base text-muted-foreground font-sans mb-10">Your speaking performance metrics.</p>
+
+      {/* New Metrics Section */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        {/* Lemon Score */}
+        <div className="rounded-2xl bg-white border border-sand-300/50 shadow-card p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2.5 rounded-2xl bg-yellow-100">
+              <Timer size={20} className="text-yellow-600" />
+            </div>
+            <div>
+              <h3 className="text-xl font-serif text-foreground mb-1">Lemon Score</h3>
+              <p className="text-sm text-muted-foreground font-sans">1-minute random speaking</p>
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl font-serif font-medium text-foreground mb-2">
+              {lemonScores.length > 0 ? Math.round(lemonScores.reduce((sum, s) => sum + (s.flowScore || 0), 0) / lemonScores.length) : '-'}
+            </div>
+            <div className="text-sm text-muted-foreground font-sans">
+              {lemonScores.length > 0 ? `Average of ${lemonScores.length} sessions` : 'No sessions yet'}
+            </div>
+          </div>
+        </div>
+
+        {/* Topic Score */}
+        <div className="rounded-2xl bg-white border border-sand-300/50 shadow-card p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2.5 rounded-2xl bg-blue-100">
+              <Target size={20} className="text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-xl font-serif text-foreground mb-1">Topic Score</h3>
+              <p className="text-sm text-muted-foreground font-sans">2-minute topic speaking</p>
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl font-serif font-medium text-foreground mb-2">
+              {topicScores.length > 0 ? Math.round(topicScores.reduce((sum, s) => sum + (s.flowScore || 0), 0) / topicScores.length) : '-'}
+            </div>
+            <div className="text-sm text-muted-foreground font-sans">
+              {topicScores.length > 0 ? `Average of ${topicScores.length} sessions` : 'No sessions yet'}
+            </div>
+          </div>
+        </div>
+
+        {/* Overall Flow Score */}
+        <div className="rounded-2xl bg-gradient-to-br from-sage-500 to-sage-600 text-white border border-sage-400/50 shadow-card p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2.5 rounded-2xl bg-white/20">
+              <BarChart3 size={20} className="text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-serif text-white mb-1">Overall Flow Score</h3>
+              <p className="text-sm text-sage-100 font-sans">Aggregate across all exercises</p>
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl font-serif font-medium text-white mb-2">
+              {storage.calculateOverallFlowScore()}%
+            </div>
+            <div className="text-sm text-sage-100 font-sans">
+              Weighted average of all exercises
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+          {/* Streak */}
+          <StatCard
+            icon={Flame}
+            label="Day Streak"
+            value={stats.currentStreak}
+            sub={`Best: ${stats.bestStreak}`}
+            className="bg-sand-100 border border-sand-300/50"
+          />
+
+          {/* Total Sessions */}
+          <StatCard
+            icon={Target}
+            label="Sessions"
+            value={stats.totalSessions}
+            className="bg-white border border-sand-300/50 shadow-card"
+          />
+
+          {/* Practice Time */}
+          <StatCard
+            icon={Clock}
+            label="Practice Time"
+            value={formatDuration(stats.totalPracticeTime)}
+            className="bg-white border border-sand-300/50 shadow-card"
+          />
+
+          {/* Avg Score */}
+          <StatCard
+            icon={Zap}
+            label="Avg Fluency"
+            value={`${stats.avgScore}%`}
+            sub={stats.bestScore > 0 ? `Best: ${stats.bestScore}%` : ''}
+            className="bg-terracotta-50 border border-terracotta-200/50"
+          />
+        </div>
+      )}
 
       {sessions.length === 0 ? (
         <div data-testid="empty-history" className="text-center py-20">

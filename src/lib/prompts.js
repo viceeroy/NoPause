@@ -16,6 +16,14 @@ export const SPEAKING_PROMPTS = [
   { id: '15', category: 'Daily Life', text: 'Talk about a hobby you enjoy. How did you get started and why do you love it?', difficulty: 'easy' },
 ];
 
+// Random words for Lemon Score exercise
+export const RANDOM_WORDS = [
+  'serendipity', 'quintessential', 'ephemeral', 'ubiquitous', 'paradigm', 'ambiguous', 'meticulous', 'resilient', 'pragmatic',
+  'eloquent', 'articulate', 'coherent', 'fluent', 'spontaneous', 'versatile', 'nuanced', 'perceptive', 'insightful',
+  'analytical', 'methodical', 'strategic', 'innovative', 'adaptable', 'proficient', 'competent', 'confident', 'expressive',
+  'charismatic', 'engaging', 'persuasive', 'diplomatic', 'tactful', 'empathetic', 'intuitive', 'creative', 'visionary'
+];
+
 export const CATEGORIES = ['All', 'Daily Life', 'Opinion', 'Storytelling', 'Abstract', 'Professional', 'Creative'];
 
 export const DIFFICULTY_COLORS = {

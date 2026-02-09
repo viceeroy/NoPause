@@ -1,12 +1,11 @@
 import '@/App.css';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { Navbar } from '@/components/ui/Navbar';
 import Dashboard from '@/pages/Dashboard';
 import Practice from '@/pages/Practice';
-import History from '@/pages/History';
 import Prompts from '@/pages/Prompts';
-import Settings from '@/pages/Settings';
+import Stats from '@/pages/Stats';
 
 function App() {
   return (
@@ -15,9 +14,10 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/practice" element={<Practice />} />
-          <Route path="/history" element={<History />} />
+          <Route path="/practice/free-speaking" element={<Practice />} />
           <Route path="/prompts" element={<Prompts />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/stats" element={<Stats />} />
+          <Route path="/history" element={<Navigate to="/stats" replace />} />
         </Routes>
         <Navbar />
         <Toaster position="top-center" richColors />

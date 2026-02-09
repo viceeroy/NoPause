@@ -1,13 +1,11 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Mic, Clock, BookOpen, Settings } from 'lucide-react';
+import { Home, BookOpen, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Home' },
-  { path: '/practice', icon: Mic, label: 'Practice' },
-  { path: '/history', icon: Clock, label: 'History' },
   { path: '/prompts', icon: BookOpen, label: 'Prompts' },
-  { path: '/settings', icon: Settings, label: 'Settings' },
+  { path: '/stats', icon: BarChart3, label: 'Stats' },
 ];
 
 export const Navbar = () => {
