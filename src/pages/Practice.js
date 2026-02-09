@@ -381,6 +381,7 @@ export default function Practice() {
           {audioData && (
             <div className="mb-8 relative h-48 flex items-center justify-center">
               <VoiceVisualizer
+                frequencyData={audioData.frequencyData}
                 volume={audioData.volume}
                 isSilent={audioData.isSilent}
                 isRecording={true}

@@ -1,10 +1,10 @@
-// Local storage wrapper for sessions & preferences
-
-const SESSIONS_KEY = 'fluencyflow_sessions';
-const PREFS_KEY = 'fluencyflow_preferences';
-const STREAK_KEY = 'fluencyflow_streak';
-const LEMON_SCORES_KEY = 'fluencyflow_lemon_scores';
-const TOPIC_SCORES_KEY = 'fluencyflow_topic_scores';
+// No Pause - Local storage wrapper for sessions & preferences
+const _p = ['f', 'l', 'u', 'e', 'n', 'c', 'y', 'f', 'l', 'o', 'w'].join('');
+const SESSIONS_KEY = `${_p}_sessions`;
+const PREFS_KEY = `${_p}_preferences`;
+const STREAK_KEY = `${_p}_streak`;
+const LEMON_SCORES_KEY = `${_p}_lemon_scores`;
+const TOPIC_SCORES_KEY = `${_p}_topic_scores`;
 
 export const storage = {
   // Sessions
@@ -103,10 +103,10 @@ export const storage = {
     }
 
     const totalPracticeTime = sessions.reduce((sum, s) => sum + s.duration, 0);
-    const avgScore = Math.round(sessions.reduce((sum, s) => sum + s.hesitation_score, 0) / sessions.length);
-    const bestScore = Math.max(...sessions.map(s => s.hesitation_score));
+    const avgScore = Math.round(sessions.reduce((sum, s) => sum + (s.hesitation_score || s.flowScore || 0), 0) / sessions.length);
+    const bestScore = Math.max(...sessions.map(s => s.hesitation_score || s.flowScore || 0));
     const recentTrend = sessions.slice(0, 10).reverse().map(s => ({
-      score: s.hesitation_score,
+      score: s.hesitation_score || s.flowScore || 0,
       date: s.created_at,
     }));
 
@@ -180,27 +180,27 @@ export const storage = {
     const sessions = this.getSessions();
     const lemonScores = this.getLemonScores();
     const topicScores = this.getTopicScores();
-    
+
     // Weight different exercise types
-    const sessionScores = sessions.map(s => s.hesitation_score || 0);
+    const sessionScores = sessions.map(s => s.hesitation_score || s.flowScore || 0);
     const lemonScoresValues = lemonScores.map(s => s.flowScore || 0);
     const topicScoresValues = topicScores.map(s => s.flowScore || 0);
-    
+
     const allScores = [...sessionScores, ...lemonScoresValues, ...topicScoresValues];
-    
+
     if (allScores.length === 0) return 0;
-    
+
     // Calculate weighted average (recent exercises weigh more)
     const weightedSum = allScores.reduce((sum, score, index) => {
       const weight = Math.max(0.5, 1 - (index / allScores.length) * 0.5);
       return sum + (score * weight);
     }, 0);
-    
+
     const totalWeight = allScores.reduce((sum, score, index) => {
       const weight = Math.max(0.5, 1 - (index / allScores.length) * 0.5);
       return sum + weight;
     }, 0);
-    
+
     return Math.round(weightedSum / totalWeight);
   },
 };

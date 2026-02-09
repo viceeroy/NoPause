@@ -1,10 +1,9 @@
 import { useRef, useEffect } from 'react';
 
-export const VoiceVisualizer = ({ volume, isSilent, isRecording }) => {
+export const VoiceVisualizer = ({ frequencyData, volume, isSilent, isRecording }) => {
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
-  const particlesRef = useRef([]);
-  const ripplesRef = useRef([]);
+  const smoothedHeightsRef = useRef(new Array(32).fill(4));
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -12,157 +11,129 @@ export const VoiceVisualizer = ({ volume, isSilent, isRecording }) => {
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
 
-    canvas.width = canvas.offsetWidth * dpr;
-    canvas.height = canvas.offsetHeight * dpr;
-    ctx.scale(dpr, dpr);
+    const updateSize = () => {
+      canvas.width = canvas.offsetWidth * dpr;
+      canvas.height = canvas.offsetHeight * dpr;
+      ctx.scale(dpr, dpr);
+    };
 
-    const w = canvas.offsetWidth;
-    const h = canvas.offsetHeight;
+    updateSize();
+    window.addEventListener('resize', updateSize);
+
+    const barCount = 32;
+    const barWidth = 6;
+    const gap = 4;
 
     const animate = () => {
+      if (!canvas) return;
+      const w = canvas.offsetWidth;
+      const h = canvas.offsetHeight;
       ctx.clearRect(0, 0, w, h);
 
+      const centerX = w / 2;
+      const centerY = h / 2;
+
       if (!isRecording) {
-        // Idle state - gentle pulse
-        const centerX = w / 2;
-        const centerY = h / 2;
-        const pulseRadius = 20 + Math.sin(Date.now() / 1000) * 5;
+        // Idle state - very subtle slow breathing
+        const totalWidth = barCount * (barWidth + gap) - gap;
+        const startX = centerX - totalWidth / 2;
 
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(90, 125, 124, 0.1)';
-        ctx.fill();
+        for (let i = 0; i < barCount; i++) {
+          const idleHeight = 4 + Math.sin(Date.now() / 1000 + i * 0.2) * 2;
+          smoothedHeightsRef.current[i] += (idleHeight - smoothedHeightsRef.current[i]) * 0.05;
+          const height = smoothedHeightsRef.current[i];
+          const x = startX + i * (barWidth + gap);
+          const y = centerY - height / 2;
 
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, pulseRadius * 0.6, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(90, 125, 124, 0.2)';
-        ctx.fill();
+          ctx.fillStyle = 'rgba(90, 125, 124, 0.1)';
+          drawRoundedRect(ctx, x, y, barWidth, height, barWidth / 2);
+        }
+        animationRef.current = requestAnimationFrame(animate);
         return;
       }
 
       // Voice-reactive visualization
-      const centerX = w / 2;
-      const centerY = h / 2;
-      const normalizedVolume = Math.min(1, Math.max(0, volume * 10));
+      const data = frequencyData || [];
+      const totalWidth = barCount * (barWidth + gap) - gap;
+      const startX = centerX - totalWidth / 2;
 
-      if (!isSilent && normalizedVolume > 0.1) {
-        // Create ripples when speaking
-        if (Math.random() < 0.1) {
-          ripplesRef.current.push({
-            x: centerX + (Math.random() - 0.5) * 100,
-            y: centerY + (Math.random() - 0.5) * 100,
-            radius: 5,
-            opacity: 0.6,
-            speed: 1 + Math.random() * 2
-          });
+      for (let i = 0; i < barCount; i++) {
+        let targetHeight = 4;
+
+        if (!isSilent && data.length > 0) {
+          // Symmetrical mapping: mid frequencies in center, high/low at edges
+          const mid = barCount / 2;
+          const distFromMid = Math.abs(i - mid);
+          const freqIndex = Math.floor(distFromMid * 2);
+          const val = data[freqIndex] || 0;
+
+          // Scale based on volume and frequency
+          targetHeight = (val / 255) * h * 0.8;
+          if (targetHeight < 6) targetHeight = 6 + Math.random() * 2;
+        } else {
+          // Silence state - calm minimal motion
+          targetHeight = 4 + Math.sin(Date.now() / 500 + i * 0.5) * 3;
         }
 
-        // Keep only recent ripples
-        ripplesRef.current = ripplesRef.current.filter(r => r.opacity > 0.01);
-      }
+        // Smooth transition (lerp) for ease-in-out feel
+        const lerpSpeed = isSilent ? 0.1 : 0.3;
+        smoothedHeightsRef.current[i] += (targetHeight - smoothedHeightsRef.current[i]) * lerpSpeed;
+        const height = smoothedHeightsRef.current[i];
 
-      // Update and draw ripples
-      ripplesRef.current = ripplesRef.current.map(ripple => ({
-        ...ripple,
-        radius: ripple.radius + ripple.speed,
-        opacity: ripple.opacity - 0.01
-      }));
+        const x = startX + i * (barWidth + gap);
+        const y = centerY - height / 2;
 
-      ripplesRef.current.forEach(ripple => {
-        ctx.beginPath();
-        ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(90, 125, 124, ${ripple.opacity})`;
-        ctx.fill();
-      });
+        // Gradient for premium look
+        const gradient = ctx.createLinearGradient(x, y, x, y + height);
+        if (isSilent) {
+          gradient.addColorStop(0, 'rgba(90, 125, 124, 0.15)');
+          gradient.addColorStop(1, 'rgba(90, 125, 124, 0.15)');
+        } else {
+          const intensity = Math.min(1, height / (h * 0.6));
+          gradient.addColorStop(0, `rgba(90, 125, 124, ${0.4 + intensity * 0.4})`);
+          gradient.addColorStop(0.5, `rgba(90, 125, 124, ${0.7 + intensity * 0.3})`);
+          gradient.addColorStop(1, `rgba(90, 125, 124, ${0.4 + intensity * 0.4})`);
+        }
 
-      // Central voice orb that responds to volume
-      const orbRadius = 15 + normalizedVolume * 40;
-      const orbGlow = normalizedVolume * 30;
-
-      // Ensure finite values for gradient and dimensions
-      const safeCenterX = isFinite(centerX) ? centerX : w / 2;
-      const safeCenterY = isFinite(centerY) ? centerY : h / 2;
-      const safeOrbRadius = isFinite(orbRadius) ? Math.max(1, Math.min(100, orbRadius)) : 15;
-      const safeOrbGlow = isFinite(orbGlow) ? Math.max(0, Math.min(50, orbGlow)) : 0;
-      const gradientRadius = Math.max(0.1, safeOrbRadius + safeOrbGlow);
-
-      // Outer glow
-      try {
-        const gradient = ctx.createRadialGradient(
-          safeCenterX, safeCenterY, 0,
-          safeCenterX, safeCenterY, gradientRadius
-        );
-        gradient.addColorStop(0, `rgba(90, 125, 124, ${0.3 + normalizedVolume * 0.4})`);
-        gradient.addColorStop(0.5, `rgba(90, 125, 124, ${0.2 + normalizedVolume * 0.3})`);
-        gradient.addColorStop(1, 'rgba(90, 125, 124, 0)');
-
-        ctx.beginPath();
-        ctx.arc(safeCenterX, safeCenterY, gradientRadius, 0, Math.PI * 2);
         ctx.fillStyle = gradient;
-        ctx.fill();
-      } catch (e) {
-        console.warn("Gradient creation failed:", e);
-      }
+        drawRoundedRect(ctx, x, y, barWidth, height, barWidth / 2);
 
-      // Inner orb
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, safeOrbRadius, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(90, 125, 124, ${0.6 + normalizedVolume * 0.4})`;
-      ctx.fill();
-
-      // Sound waves emanating from center
-      if (!isSilent) {
-        const waveCount = 3;
-        for (let i = 0; i < waveCount; i++) {
-          const waveRadius = safeOrbRadius + 20 + (i * 15) + (Date.now() / 50) % 20;
-          const waveOpacity = Math.max(0, 0.3 - (i * 0.1) - normalizedVolume * 0.2);
-
-          ctx.beginPath();
-          ctx.arc(centerX, centerY, waveRadius, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(90, 125, 124, ${waveOpacity})`;
-          ctx.lineWidth = 2 - (i * 0.5);
-          ctx.stroke();
-        }
-      }
-
-      // Frequency bars around the orb
-      if (!isSilent) {
-        const barCount = 12;
-        const barHeight = normalizedVolume * 30;
-
-        for (let i = 0; i < barCount; i++) {
-          const angle = (i / barCount) * Math.PI * 2;
-          const barX = centerX + Math.cos(angle) * (safeOrbRadius + 10);
-          const barY = centerY + Math.sin(angle) * (safeOrbRadius + 10);
-          const barEndX = centerX + Math.cos(angle) * (safeOrbRadius + 10 + barHeight);
-          const barEndY = centerY + Math.sin(angle) * (safeOrbRadius + 10 + barHeight);
-
-          ctx.beginPath();
-          ctx.moveTo(barX, barY);
-          ctx.lineTo(barEndX, barEndY);
-          ctx.strokeStyle = `rgba(90, 125, 124, ${0.4 + normalizedVolume * 0.6})`;
-          ctx.lineWidth = 2;
-          ctx.stroke();
-
-          // Bar endpoints
-          ctx.beginPath();
-          ctx.arc(barEndX, barEndY, 2, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(90, 125, 124, ${0.6 + normalizedVolume * 0.4})`;
-          ctx.fill();
+        // Subtle glow for active speaking
+        if (!isSilent && height > h * 0.3) {
+          ctx.shadowBlur = 10 * (height / h);
+          ctx.shadowColor = 'rgba(90, 125, 124, 0.3)';
+        } else {
+          ctx.shadowBlur = 0;
         }
       }
 
       animationRef.current = requestAnimationFrame(animate);
     };
 
-    animate();
+    const drawRoundedRect = (ctx, x, y, width, height, radius) => {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+      ctx.fill();
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
 
     return () => {
+      window.removeEventListener('resize', updateSize);
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [volume, isSilent, isRecording]);
+  }, [frequencyData, volume, isSilent, isRecording]);
 
   return (
     <canvas

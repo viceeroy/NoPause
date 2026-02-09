@@ -56,12 +56,23 @@ export default function Stats() {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
-  // Prepare chart data (oldest first)
-  const chartData = [...sessions].reverse().map((s, i) => ({
-    index: i + 1,
-    score: s.hesitation_score,
-    date: new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-  }));
+  // Prepare multi-line chart data (oldest first)
+  const allSessionsCombined = [...sessions, ...lemonScores, ...topicScores]
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+  const multiLineData = allSessionsCombined.slice(-10).map((s, i) => {
+    const score = s.flowScore || s.hesitation_score || 0;
+
+    // Calculate rolling overall average
+    const slice = allSessionsCombined.slice(0, i + 1);
+    const overallAvg = Math.round(slice.reduce((sum, curr) => sum + (curr.flowScore || curr.hesitation_score || 0), 0) / slice.length);
+
+    return {
+      name: `S${i + 1}`,
+      overall: overallAvg,
+      fullDate: new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    };
+  });
 
   return (
     <div data-testid="history-page" className="min-h-screen pb-28 px-6 md:px-12 lg:px-20 pt-8 max-w-6xl mx-auto">
@@ -69,49 +80,7 @@ export default function Stats() {
       <p className="text-base text-muted-foreground font-sans mb-10">Your speaking performance metrics.</p>
 
       {/* New Metrics Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        {/* Lemon Score */}
-        <div className="rounded-2xl bg-white border border-sand-300/50 shadow-card p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 rounded-2xl bg-yellow-100">
-              <Timer size={20} className="text-yellow-600" />
-            </div>
-            <div>
-              <h3 className="text-xl font-serif text-foreground mb-1">Lemon Score</h3>
-              <p className="text-sm text-muted-foreground font-sans">1-minute random speaking</p>
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-serif font-medium text-foreground mb-2">
-              {lemonScores.length > 0 ? Math.round(lemonScores.reduce((sum, s) => sum + (s.flowScore || 0), 0) / lemonScores.length) : '-'}
-            </div>
-            <div className="text-sm text-muted-foreground font-sans">
-              {lemonScores.length > 0 ? `Average of ${lemonScores.length} sessions` : 'No sessions yet'}
-            </div>
-          </div>
-        </div>
-
-        {/* Topic Score */}
-        <div className="rounded-2xl bg-white border border-sand-300/50 shadow-card p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 rounded-2xl bg-blue-100">
-              <Target size={20} className="text-blue-600" />
-            </div>
-            <div>
-              <h3 className="text-xl font-serif text-foreground mb-1">Topic Score</h3>
-              <p className="text-sm text-muted-foreground font-sans">2-minute topic speaking</p>
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-serif font-medium text-foreground mb-2">
-              {topicScores.length > 0 ? Math.round(topicScores.reduce((sum, s) => sum + (s.flowScore || 0), 0) / topicScores.length) : '-'}
-            </div>
-            <div className="text-sm text-muted-foreground font-sans">
-              {topicScores.length > 0 ? `Average of ${topicScores.length} sessions` : 'No sessions yet'}
-            </div>
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-12">
         {/* Overall Flow Score */}
         <div className="rounded-2xl bg-gradient-to-br from-sage-500 to-sage-600 text-white border border-sage-400/50 shadow-card p-6">
           <div className="flex items-center gap-3 mb-4">
@@ -127,15 +96,126 @@ export default function Stats() {
             <div className="text-3xl font-serif font-medium text-white mb-2">
               {storage.calculateOverallFlowScore()}%
             </div>
-            <div className="text-sm text-sage-100 font-sans">
-              Weighted average of all exercises
+            {/* Progress Bar */}
+            <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden mb-2">
+              <div
+                className="h-full bg-white rounded-full"
+                style={{ width: `${storage.calculateOverallFlowScore()}%` }}
+              />
             </div>
+            <div className="text-sm text-sage-100 font-sans">
+              Flow Score
+            </div>
+          </div>
+        </div>
+
+        {/* Free Speaking Score */}
+        <div className="rounded-2xl bg-gradient-to-br from-terracotta-500 to-terracotta-600 text-white border border-terracotta-400/50 shadow-card p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2.5 rounded-2xl bg-white/20">
+              <Zap size={20} className="text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-serif text-white mb-1">Free Speaking — Flow Score</h3>
+              <p className="text-sm text-terracotta-100 font-sans">Untimed exploration</p>
+            </div>
+          </div>
+          <div className="text-center">
+            <div
+              className="text-3xl font-serif font-medium text-white mb-2"
+            >
+              {stats?.avgScore ? `${stats.avgScore}%` : '-'}
+            </div>
+            {/* Progress Bar */}
+            <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden mb-2">
+              <div
+                className="h-full bg-white rounded-full"
+                style={{ width: `${stats?.avgScore || 0}%` }}
+              />
+            </div>
+            <div className="text-sm text-terracotta-100 font-sans">
+              Flow Score
+            </div>
+          </div>
+        </div>
+
+        {/* Lemon Score */}
+        <div className="rounded-2xl bg-gradient-to-br from-yellow-500 to-yellow-600 text-white border border-yellow-400/50 shadow-card p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2.5 rounded-2xl bg-white/20">
+              <Timer size={20} className="text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-serif text-white mb-1">Lemon Flow Score</h3>
+              <p className="text-sm text-yellow-100 font-sans">1-minute random speaking</p>
+            </div>
+          </div>
+          <div className="text-center">
+            {(() => {
+              const avg = lemonScores.length > 0 ? Math.round(lemonScores.reduce((sum, s) => sum + (s.flowScore || 0), 0) / lemonScores.length) : null;
+              return (
+                <>
+                  <div
+                    className="text-3xl font-serif font-medium text-white mb-2"
+                  >
+                    {avg !== null ? `${avg}%` : '-'}
+                  </div>
+                  {/* Progress Bar */}
+                  <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden mb-2">
+                    <div
+                      className="h-full bg-white rounded-full"
+                      style={{ width: `${avg || 0}%` }}
+                    />
+                  </div>
+                  <div className="text-sm text-yellow-100 font-sans">
+                    Flow Score
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+
+        {/* Topic Score */}
+        <div className="rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-white border border-blue-400/50 shadow-card p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2.5 rounded-2xl bg-white/20">
+              <Target size={20} className="text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-serif text-white mb-1">Topic Flow Score</h3>
+              <p className="text-sm text-blue-100 font-sans">2-minute topic speaking</p>
+            </div>
+          </div>
+          <div className="text-center">
+            {(() => {
+              const avg = topicScores.length > 0 ? Math.round(topicScores.reduce((sum, s) => sum + (s.flowScore || 0), 0) / topicScores.length) : null;
+              return (
+                <>
+                  <div
+                    className="text-3xl font-serif font-medium text-white mb-2"
+                  >
+                    {avg !== null ? `${avg}%` : '-'}
+                  </div>
+                  {/* Progress Bar */}
+                  <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden mb-2">
+                    <div
+                      className="h-full bg-white rounded-full"
+                      style={{ width: `${avg || 0}%` }}
+                    />
+                  </div>
+                  <div className="text-sm text-blue-100 font-sans">
+                    Flow Score
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>
 
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
           {/* Streak */}
           <StatCard
             icon={Flame}
@@ -145,10 +225,10 @@ export default function Stats() {
             className="bg-sand-100 border border-sand-300/50"
           />
 
-          {/* Total Sessions */}
+          {/* Sessions */}
           <StatCard
             icon={Target}
-            label="Sessions"
+            label="Total Sessions"
             value={stats.totalSessions}
             className="bg-white border border-sand-300/50 shadow-card"
           />
@@ -160,15 +240,66 @@ export default function Stats() {
             value={formatDuration(stats.totalPracticeTime)}
             className="bg-white border border-sand-300/50 shadow-card"
           />
+        </div>
+      )}
 
-          {/* Avg Score */}
-          <StatCard
-            icon={Zap}
-            label="Avg Fluency"
-            value={`${stats.avgScore}%`}
-            sub={stats.bestScore > 0 ? `Best: ${stats.bestScore}%` : ''}
-            className="bg-terracotta-50 border border-terracotta-200/50"
-          />
+      {/* Trend Chart Section */}
+      {allSessionsCombined.length > 1 && (
+        <div data-testid="multi-line-chart" className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-8 mb-12">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="p-2.5 rounded-2xl bg-sage-50 text-sage-600">
+              <TrendingUp size={20} />
+            </div>
+            <div>
+              <h3 className="text-xl font-serif text-foreground mb-1">Performance Trends</h3>
+              <p className="text-sm text-muted-foreground font-sans">Flow Score progress across all modes</p>
+            </div>
+          </div>
+
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={multiLineData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0EFEA" />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#949181', fontSize: 12, fontFamily: 'Nunito' }}
+                  dy={10}
+                />
+                <YAxis
+                  domain={[0, 100]}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#949181', fontSize: 12, fontFamily: 'Nunito' }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#fff',
+                    border: '1px solid #E5E3DC',
+                    borderRadius: '16px',
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
+                    padding: '12px'
+                  }}
+                  itemStyle={{ fontSize: '12px', fontFamily: 'Nunito', padding: '2px 0' }}
+                  labelStyle={{ display: 'none' }}
+                  cursor={{ stroke: '#E5E3DC', strokeWidth: 1 }}
+                />
+
+                {/* Overall - Red */}
+                <Line
+                  type="monotone"
+                  dataKey="overall"
+                  name="Overall Flow Score"
+                  stroke="#D97C5F"
+                  strokeWidth={4}
+                  dot={{ r: 4, fill: '#D97C5F', strokeWidth: 0 }}
+                  activeDot={{ r: 6, fill: '#D97C5F', strokeWidth: 2, stroke: '#fff' }}
+                  animationDuration={1800}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       )}
 
@@ -187,38 +318,12 @@ export default function Stats() {
         </div>
       ) : (
         <>
-          {/* Progress Chart */}
-          {chartData.length > 1 && (
-            <div data-testid="progress-chart" className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-6 mb-8">
-              <div className="flex items-center gap-2 mb-4">
-                <TrendingUp size={18} className="text-sage-500" />
-                <h3 className="font-serif text-lg text-foreground">Fluency Over Time</h3>
-              </div>
-              <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#5A7D7C" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#5A7D7C" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontFamily: 'Nunito', fill: '#6B7280' }} />
-                  <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fontFamily: 'Nunito', fill: '#6B7280' }} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #E5E3DC', borderRadius: '12px', fontSize: '13px', fontFamily: 'Nunito' }}
-                    formatter={(value) => [`${value}%`, 'Fluency']}
-                  />
-                  <Area type="monotone" dataKey="score" stroke="#5A7D7C" strokeWidth={2.5} fill="url(#scoreGradient)" dot={{ r: 3, fill: '#5A7D7C', strokeWidth: 0 }} activeDot={{ r: 5, fill: '#D97C5F', strokeWidth: 0 }} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          )}
 
           {/* Sessions List */}
           <div className="stagger-children space-y-3">
             {sessions.map((session) => {
-              const scoreColor = AudioAnalyzer.getScoreColor(session.hesitation_score);
-              const scoreLabel = AudioAnalyzer.getScoreLabel(session.hesitation_score);
+              const score = session.hesitation_score || session.flowScore || 0;
+              const scoreLabel = AudioAnalyzer.getScoreLabel(score);
               return (
                 <div
                   key={session.id}
@@ -226,9 +331,9 @@ export default function Stats() {
                   className="rounded-2xl bg-white border border-sand-300/50 shadow-card p-5 flex items-center gap-5 card-hover"
                 >
                   {/* Score Badge */}
-                  <div className="flex-shrink-0 w-14 h-14 rounded-2xl flex flex-col items-center justify-center" style={{ backgroundColor: scoreColor + '15' }}>
-                    <span className="text-lg font-serif font-medium" style={{ color: scoreColor }}>{session.hesitation_score}</span>
-                    <span className="text-[9px] font-sans font-semibold uppercase" style={{ color: scoreColor }}>%</span>
+                  <div className="flex-shrink-0 w-14 h-14 rounded-2xl flex flex-col items-center justify-center bg-sand-100">
+                    <span className="text-lg font-serif font-medium text-foreground">{score}</span>
+                    <span className="text-[9px] font-sans font-semibold uppercase text-muted-foreground">%</span>
                   </div>
 
                   {/* Details */}

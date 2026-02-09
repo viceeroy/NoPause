@@ -21,14 +21,14 @@ const StatCard = ({ icon: Icon, label, value, sub, className, testId }) => (
 export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
-  
+
   // Content for Practice page
   const [lemonWord, setLemonWord] = useState('');
   const [topicPrompt, setTopicPrompt] = useState(null);
 
   useEffect(() => {
     setStats(storage.getStats());
-    
+
     // Initialize random content for display
     setLemonWord(RANDOM_WORDS[Math.floor(Math.random() * RANDOM_WORDS.length)]);
     setTopicPrompt(SPEAKING_PROMPTS[Math.floor(Math.random() * SPEAKING_PROMPTS.length)]);
@@ -89,7 +89,7 @@ export default function Dashboard() {
               <p className="text-sm text-muted-foreground font-sans">Talk about anything, no timer</p>
             </div>
           </div>
-          
+
           <div className="text-center mb-6">
             <div className="flex justify-center mb-4">
               <div className="relative w-24 h-24 rounded-full flex items-center justify-center bg-sage-100">
@@ -99,7 +99,7 @@ export default function Dashboard() {
             </div>
             <p className="text-sm text-muted-foreground font-sans">Practice speaking freely without time limits</p>
           </div>
-          
+
           <button
             onClick={startFreeSpeak}
             className="w-full py-3 rounded-full font-sans font-semibold text-sm btn-press transition-colors bg-sage-500 hover:bg-sage-600 text-white"
@@ -121,21 +121,21 @@ export default function Dashboard() {
                 <p className="text-sm text-muted-foreground font-sans">1 minute speaking</p>
               </div>
             </div>
-            
+
             <div className="text-center mb-6">
               <div className="text-3xl font-serif font-medium text-foreground mb-2">
                 {lemonWord}
               </div>
               <p className="text-sm text-muted-foreground font-sans">Random word</p>
             </div>
-            
+
             <div className="text-center mb-4">
               <div className="text-2xl font-serif font-medium text-foreground mb-2">
                 1:00
               </div>
               <p className="text-sm text-muted-foreground font-sans">Timer</p>
             </div>
-            
+
             <button
               onClick={startLemon}
               className="w-full py-3 rounded-full font-sans font-semibold text-sm btn-press transition-colors bg-yellow-500 hover:bg-yellow-600 text-white"
@@ -155,7 +155,7 @@ export default function Dashboard() {
                 <p className="text-sm text-muted-foreground font-sans">2 minute speaking</p>
               </div>
             </div>
-            
+
             <div className="text-center mb-6">
               <div className="text-lg font-serif text-foreground mb-2">
                 {topicPrompt?.text}
@@ -164,14 +164,14 @@ export default function Dashboard() {
                 {topicPrompt?.category} • {topicPrompt?.difficulty}
               </div>
             </div>
-            
+
             <div className="text-center mb-4">
               <div className="text-2xl font-serif font-medium text-foreground mb-2">
                 2:00
               </div>
               <p className="text-sm text-muted-foreground font-sans">Timer</p>
             </div>
-            
+
             <button
               onClick={startTopic}
               className="w-full py-3 rounded-full font-sans font-semibold text-sm btn-press transition-colors bg-blue-500 hover:bg-blue-600 text-white"
@@ -212,49 +212,16 @@ export default function Dashboard() {
           className="bg-white border border-sand-300/50 shadow-card"
         />
 
-        {/* Avg Score */}
+        {/* Flow Score */}
         <StatCard
           testId="avg-score-card"
           icon={Zap}
-          label="Avg Fluency"
+          label="Flow Score"
           value={`${stats.avgScore}%`}
           sub={stats.bestScore > 0 ? `Best: ${stats.bestScore}%` : ''}
           className="bg-terracotta-50 border border-terracotta-200/50"
         />
       </div>
-
-      {/* Trend Chart */}
-      {stats.recentTrend.length > 1 && (
-        <div data-testid="trend-chart" className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-6 mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={18} className="text-sage-500" />
-            <h3 className="font-serif text-lg text-foreground">Recent Progress</h3>
-          </div>
-          <ResponsiveContainer width="100%" height={120}>
-            <LineChart data={stats.recentTrend}>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#fff',
-                  border: '1px solid #E5E3DC',
-                  borderRadius: '12px',
-                  fontSize: '13px',
-                  fontFamily: 'Nunito',
-                }}
-                formatter={(value) => [`${value}%`, 'Fluency']}
-                labelFormatter={() => ''}
-              />
-              <Line
-                type="monotone"
-                dataKey="score"
-                stroke="#5A7D7C"
-                strokeWidth={2.5}
-                dot={{ r: 4, fill: '#5A7D7C', strokeWidth: 0 }}
-                activeDot={{ r: 6, fill: '#D97C5F', strokeWidth: 0 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-4">

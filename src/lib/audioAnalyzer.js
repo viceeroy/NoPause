@@ -300,11 +300,12 @@ export class AudioAnalyzer {
     };
   }
 
-  static calculateHesitationScore(silenceTimeMs, totalTimeMs) {
-    if (totalTimeMs <= 0) return 100;
-    const silenceRatio = silenceTimeMs / totalTimeMs;
-    const score = Math.max(0, Math.min(100, Math.round((1 - silenceRatio) * 100)));
-    return score;
+  static calculateFlowScore(speakingTimeMs, totalTimeMs, hesitationCount = 0) {
+    if (totalTimeMs <= 0) return 0;
+    const speakingRatio = speakingTimeMs / totalTimeMs;
+    const hesitationPenalty = (hesitationCount * 0.02);
+    let score = (speakingRatio - hesitationPenalty) * 100;
+    return Math.max(0, Math.min(100, Math.round(score)));
   }
 
   static getScoreLabel(score) {
