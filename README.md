@@ -105,4 +105,4 @@ No Pause is built on a "Zero-Trust" audio architecture.
 
 ## 📄 License
 
-Open source under the MIT License.
+Copyright <viseeroy>
