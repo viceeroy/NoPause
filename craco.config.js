@@ -33,6 +33,15 @@ if (config.enableHealthCheck) {
 }
 
 const webpackConfig = {
+  babel: {
+    plugins: [
+      "@babel/plugin-transform-class-properties",
+      "@babel/plugin-transform-private-methods",
+      "@babel/plugin-transform-private-property-in-object",
+      "@babel/plugin-transform-nullish-coalescing-operator",
+      "@babel/plugin-transform-optional-chaining",
+    ],
+  },
   eslint: {
     configure: {
       extends: ["plugin:react-hooks/recommended"],
@@ -72,9 +81,7 @@ const webpackConfig = {
 
 // Only add babel metadata plugin during dev server
 if (config.enableVisualEdits && babelMetadataPlugin) {
-  webpackConfig.babel = {
-    plugins: [babelMetadataPlugin],
-  };
+  webpackConfig.babel.plugins.push(babelMetadataPlugin);
 }
 
 webpackConfig.devServer = (devServerConfig) => {
