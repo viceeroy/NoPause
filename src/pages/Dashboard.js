@@ -77,27 +77,27 @@ export default function Dashboard() {
 
       {/* Speaking Area */}
       <div className="mb-8 sm:mb-16">
-        {/* Free Speaking Block */}
-        <div
-          data-testid="free-speak-card"
-          onClick={() => handleCardClick('free')}
-          className="rounded-2xl sm:rounded-3xl bg-white border border-sand-300/50 shadow-card p-6 sm:p-12 mb-4 sm:mb-8 text-center cursor-pointer card-hover btn-press relative overflow-hidden group"
-        >
-          <div className="flex justify-center mb-3 sm:mb-6">
-            <div className="relative w-20 sm:w-32 h-20 sm:h-32 rounded-full flex items-center justify-center bg-sage-50 transition-transform duration-300 group-hover:scale-110">
-              <div className="absolute inset-0 rounded-full animate-pulse bg-sage-400 opacity-20"></div>
-              <Mic size={32} className="sm:text-sage-600 text-sage-600 relative z-10 sm:hidden" />
-              <Mic size={56} className="text-sage-600 relative z-10 hidden sm:block" />
+        {/* Grid layout: Free Speaking takes full width, Lemon and Topic below in 2 columns */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
+          {/* Free Speaking Block - spans full width on mobile, left column on desktop */}
+          <div
+            data-testid="free-speak-card"
+            onClick={() => handleCardClick('free')}
+            className="md:col-span-1 rounded-2xl sm:rounded-3xl bg-white border border-sand-300/50 shadow-card p-6 sm:p-8 text-center cursor-pointer card-hover btn-press relative overflow-hidden group"
+          >
+            <div className="flex justify-center mb-3 sm:mb-6">
+              <div className="relative w-20 sm:w-28 h-20 sm:h-28 rounded-full flex items-center justify-center bg-sage-50 transition-transform duration-300 group-hover:scale-110">
+                <div className="absolute inset-0 rounded-full animate-pulse bg-sage-400 opacity-20"></div>
+                <Mic size={32} className="sm:text-sage-600 text-sage-600 relative z-10 sm:hidden" />
+                <Mic size={48} className="text-sage-600 relative z-10 hidden sm:block" />
+              </div>
             </div>
+
+            <h3 className="text-lg sm:text-xl font-serif text-foreground mb-1">Free Speaking</h3>
+            <p className="text-sm sm:text-base text-muted-foreground font-sans">Practice continuous speaking without time limits</p>
           </div>
 
-          <h3 className="text-lg sm:text-2xl font-serif text-foreground mb-1">Free Speaking</h3>
-          <p className="text-sm sm:text-base text-muted-foreground font-sans">Practice continuous speaking without time limits</p>
-        </div>
-
-        {/* Side-by-side blocks */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
-          {/* Lemon Technique */}
+          {/* Lemon Technique Block */}
           <div
             onClick={() => handleCardClick('lemon')}
             className="rounded-2xl sm:rounded-3xl bg-white border border-sand-300/50 shadow-card p-4 sm:p-8 text-center cursor-pointer card-hover btn-press relative overflow-hidden group"
@@ -125,7 +125,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Topic Speaking */}
+          {/* Topic Speaking Block */}
           <div
             onClick={() => handleCardClick('topic')}
             className="rounded-2xl sm:rounded-3xl bg-white border border-sand-300/50 shadow-card p-4 sm:p-8 text-center cursor-pointer card-hover btn-press relative overflow-hidden group"

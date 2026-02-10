@@ -92,61 +92,61 @@ export default function Stats() {
       <p className="text-sm sm:text-base text-muted-foreground font-sans mb-6 sm:mb-10">Your speaking performance metrics.</p>
 
       {/* New Metrics Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-6 mb-8 sm:mb-12">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-8 sm:mb-12">
         {/* Overall Flow Score */}
-        <div className="rounded-xl sm:rounded-2xl bg-gradient-to-br from-sage-500 to-sage-600 text-white border border-sage-400/50 shadow-card p-4 sm:p-6">
-          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-            <div className="p-1.5 sm:p-2.5 rounded-2xl bg-white/20 flex-shrink-0">
-              <BarChart3 size={16} className="sm:hidden text-white" />
-              <BarChart3 size={20} className="hidden sm:block text-white" />
+        <div className="rounded-lg sm:rounded-xl bg-gradient-to-br from-sage-500 to-sage-600 text-white border border-sage-400/50 shadow-card p-3 sm:p-4">
+          <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+            <div className="p-1 sm:p-1.5 rounded-lg bg-white/20 flex-shrink-0">
+              <BarChart3 size={14} className="sm:hidden text-white" />
+              <BarChart3 size={16} className="hidden sm:block text-white" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-base sm:text-xl font-serif text-white mb-0.5 sm:mb-1">Overall Flow Score</h3>
-              <p className="text-xs sm:text-sm text-sage-100 font-sans">Aggregate across all exercises</p>
+              <h3 className="text-sm sm:text-base font-serif text-white mb-0 sm:mb-0.5">Overall Flow Score</h3>
+              <p className="text-[10px] sm:text-xs text-sage-100 font-sans">All exercises</p>
             </div>
           </div>
           <div className="text-center">
-            <div className="text-2xl sm:text-4xl font-serif font-bold text-white mb-0.5 sm:mb-1">
+            <div className="text-xl sm:text-2xl font-serif font-bold text-white mb-0.5">
               {storage.calculateOverallFlowScore()}%
             </div>
-            <div className="text-xs sm:text-sm text-sage-100 font-sans font-medium uppercase tracking-widest opacity-80">
-              Overall Flow
+            <div className="text-[10px] sm:text-xs text-sage-100 font-sans font-medium uppercase tracking-widest opacity-80">
+              Overall
             </div>
           </div>
         </div>
 
         {/* Free Speaking Score */}
-        <div className="rounded-xl sm:rounded-2xl bg-gradient-to-br from-terracotta-500 to-terracotta-600 text-white border border-terracotta-400/50 shadow-card p-4 sm:p-6">
-          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-            <div className="p-1.5 sm:p-2.5 rounded-2xl bg-white/20 flex-shrink-0">
-              <Zap size={16} className="sm:hidden text-white" />
-              <Zap size={20} className="hidden sm:block text-white" />
+        <div className="rounded-lg sm:rounded-xl bg-gradient-to-br from-terracotta-500 to-terracotta-600 text-white border border-terracotta-400/50 shadow-card p-3 sm:p-4">
+          <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+            <div className="p-1 sm:p-1.5 rounded-lg bg-white/20 flex-shrink-0">
+              <Zap size={14} className="sm:hidden text-white" />
+              <Zap size={16} className="hidden sm:block text-white" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-base sm:text-xl font-serif text-white mb-0.5 sm:mb-1">Free Speaking — Flow Score</h3>
-              <p className="text-xs sm:text-sm text-terracotta-100 font-sans">Untimed exploration</p>
+              <h3 className="text-sm sm:text-base font-serif text-white mb-0 sm:mb-0.5">Free Speaking Score</h3>
+              <p className="text-[10px] sm:text-xs text-terracotta-100 font-sans">Untimed</p>
             </div>
           </div>
           <div className="text-center">
-            <div className="text-2xl sm:text-4xl font-serif font-bold text-white mb-0.5 sm:mb-1">
+            <div className="text-xl sm:text-2xl font-serif font-bold text-white mb-0.5">
               {stats?.totalSessions > 0 ? `${stats.avgScore}%` : '-'}
             </div>
-            <div className="text-xs sm:text-sm text-terracotta-100 font-sans font-medium uppercase tracking-widest opacity-80">
+            <div className="text-[10px] sm:text-xs text-terracotta-100 font-sans font-medium uppercase tracking-widest opacity-80">
               Free Speak
             </div>
           </div>
         </div>
 
         {/* Lemon Score */}
-        <div className="rounded-xl sm:rounded-2xl bg-gradient-to-br from-yellow-500 to-yellow-600 text-white border border-yellow-400/50 shadow-card p-4 sm:p-6">
-          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-            <div className="p-1.5 sm:p-2.5 rounded-2xl bg-white/20 flex-shrink-0">
-              <Timer size={16} className="sm:hidden text-white" />
-              <Timer size={20} className="hidden sm:block text-white" />
+        <div className="rounded-lg sm:rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600 text-white border border-yellow-400/50 shadow-card p-3 sm:p-4">
+          <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+            <div className="p-1 sm:p-1.5 rounded-lg bg-white/20 flex-shrink-0">
+              <Timer size={14} className="sm:hidden text-white" />
+              <Timer size={16} className="hidden sm:block text-white" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-base sm:text-xl font-serif text-white mb-0.5 sm:mb-1">Lemon Flow Score</h3>
-              <p className="text-xs sm:text-sm text-yellow-100 font-sans">1-minute random speaking</p>
+              <h3 className="text-sm sm:text-base font-serif text-white mb-0 sm:mb-0.5">Lemon Flow Score</h3>
+              <p className="text-[10px] sm:text-xs text-yellow-100 font-sans">1-minute</p>
             </div>
           </div>
           <div className="text-center">
@@ -154,11 +154,11 @@ export default function Stats() {
               const avg = lemonScores.length > 0 ? Math.round(lemonScores.reduce((sum, s) => sum + (s.flowScore || 0), 0) / lemonScores.length) : null;
               return (
                 <>
-                  <div className="text-2xl sm:text-4xl font-serif font-bold text-white mb-0.5 sm:mb-1">
+                  <div className="text-xl sm:text-2xl font-serif font-bold text-white mb-0.5">
                     {avg !== null ? `${avg}%` : '-'}
                   </div>
-                  <div className="text-xs sm:text-sm text-yellow-100 font-sans font-medium uppercase tracking-widest opacity-80">
-                    Lemon Average
+                  <div className="text-[10px] sm:text-xs text-yellow-100 font-sans font-medium uppercase tracking-widest opacity-80">
+                    Lemon
                   </div>
                 </>
               );
@@ -167,15 +167,15 @@ export default function Stats() {
         </div>
 
         {/* Topic Score */}
-        <div className="rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-white border border-blue-400/50 shadow-card p-4 sm:p-6">
-          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-            <div className="p-1.5 sm:p-2.5 rounded-2xl bg-white/20 flex-shrink-0">
-              <Target size={16} className="sm:hidden text-white" />
-              <Target size={20} className="hidden sm:block text-white" />
+        <div className="rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white border border-blue-400/50 shadow-card p-3 sm:p-4">
+          <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+            <div className="p-1 sm:p-1.5 rounded-lg bg-white/20 flex-shrink-0">
+              <Target size={14} className="sm:hidden text-white" />
+              <Target size={16} className="hidden sm:block text-white" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-base sm:text-xl font-serif text-white mb-0.5 sm:mb-1">Topic Flow Score</h3>
-              <p className="text-xs sm:text-sm text-blue-100 font-sans">2-minute topic speaking</p>
+              <h3 className="text-sm sm:text-base font-serif text-white mb-0 sm:mb-0.5">Topic Flow Score</h3>
+              <p className="text-[10px] sm:text-xs text-blue-100 font-sans">2-minute</p>
             </div>
           </div>
           <div className="text-center">
@@ -183,11 +183,11 @@ export default function Stats() {
               const avg = topicScores.length > 0 ? Math.round(topicScores.reduce((sum, s) => sum + (s.flowScore || 0), 0) / topicScores.length) : null;
               return (
                 <>
-                  <div className="text-2xl sm:text-4xl font-serif font-bold text-white mb-0.5 sm:mb-1">
+                  <div className="text-xl sm:text-2xl font-serif font-bold text-white mb-0.5">
                     {avg !== null ? `${avg}%` : '-'}
                   </div>
-                  <div className="text-xs sm:text-sm text-blue-100 font-sans font-medium uppercase tracking-widest opacity-80">
-                    Topic Average
+                  <div className="text-[10px] sm:text-xs text-blue-100 font-sans font-medium uppercase tracking-widest opacity-80">
+                    Topic
                   </div>
                 </>
               );
