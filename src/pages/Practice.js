@@ -282,62 +282,66 @@ export default function Practice() {
 
   // ---- SETUP STATE ----
   return (
-    <div data-testid="practice-page" className="min-h-screen pb-28 px-6 md:px-12 lg:px-20 pt-8 max-w-4xl mx-auto">
+    <div data-testid="practice-page" className="min-h-screen pb-28 px-3 sm:px-6 md:px-12 lg:px-20 pt-4 sm:pt-8 max-w-4xl mx-auto">
       <button
         data-testid="back-to-home"
         onClick={handleBack}
-        className="flex items-center gap-1 text-muted-foreground font-sans text-sm mb-8 hover:text-foreground btn-press" style={{ transition: 'color 0.2s ease' }}
+        className="flex items-center gap-1 text-muted-foreground font-sans text-xs sm:text-sm mb-6 sm:mb-8 hover:text-foreground btn-press" style={{ transition: 'color 0.2s ease' }}
       >
-        <ChevronLeft size={16} />
+        <ChevronLeft size={14} className="sm:hidden" />
+        <ChevronLeft size={16} className="hidden sm:block" />
         Back
       </button>
 
       {state !== 'recording' && (
         <>
-          <h1 className="text-4xl md:text-5xl font-serif font-medium text-foreground mb-3">{getModeTitle()}</h1>
-          <p className="text-base text-muted-foreground font-sans mb-12">{getModeDescription()}</p>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-serif font-medium text-foreground mb-2 sm:mb-3">{getModeTitle()}</h1>
+          <p className="text-sm sm:text-base text-muted-foreground font-sans mb-8 sm:mb-12">{getModeDescription()}</p>
         </>
       )}
 
       {(state === 'setup' || state === 'countdown') && (
-        <div className="text-center py-10">
+        <div className="text-center py-6 sm:py-10">
           {micPermission === 'denied' && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl w-full max-w-md mx-auto">
-              <div className="flex items-center gap-2 text-red-600 mb-2">
-                <AlertTriangle size={16} />
-                <span className="font-sans font-semibold text-sm">Microphone access denied</span>
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-xl sm:rounded-2xl w-full max-w-md mx-auto">
+              <div className="flex items-center gap-2 text-red-600 mb-1 sm:mb-2">
+                <AlertTriangle size={14} className="sm:hidden" />
+                <AlertTriangle size={16} className="hidden sm:block" />
+                <span className="font-sans font-semibold text-xs sm:text-sm">Microphone access denied</span>
               </div>
-              <p className="text-red-600 text-sm font-sans">
+              <p className="text-red-600 text-xs sm:text-sm font-sans">
                 Please allow microphone access to practice.
               </p>
             </div>
           )}
 
-          <div className={cn("mb-12 transition-all duration-500", state === 'countdown' && "opacity-30 scale-95 blur-[2px]")}>
+          <div className={cn("mb-8 sm:mb-12 transition-all duration-500", state === 'countdown' && "opacity-30 scale-95 blur-[2px]")}>
             {mode === 'lemon' && (
-              <div className="mb-8 p-10 bg-yellow-50 border border-yellow-200 rounded-[40px] shadow-sm">
-                <p className="text-xs text-yellow-600 uppercase tracking-widest font-bold mb-4">You will speak about:</p>
-                <div className="text-5xl md:text-7xl font-serif font-bold text-yellow-900 mb-6">
+              <div className="mb-4 sm:mb-8 p-4 sm:p-10 bg-yellow-50 border border-yellow-200 rounded-3xl sm:rounded-[40px] shadow-sm">
+                <p className="text-[10px] sm:text-xs text-yellow-600 uppercase tracking-widest font-bold mb-2 sm:mb-4">You will speak about:</p>
+                <div className="text-3xl sm:text-5xl md:text-7xl font-serif font-bold text-yellow-900 mb-3 sm:mb-6">
                   {lemonWord}
                 </div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-100 text-yellow-700 rounded-full text-sm font-sans font-bold">
-                  <Timer size={16} />
+                <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-yellow-100 text-yellow-700 rounded-full text-xs sm:text-sm font-sans font-bold">
+                  <Timer size={14} className="sm:hidden" />
+                  <Timer size={16} className="hidden sm:block" />
                   60 Seconds Target
                 </div>
               </div>
             )}
 
             {mode === 'topic' && topicPrompt && (
-              <div className="mb-8 p-10 bg-blue-50 border border-blue-200 rounded-[40px] shadow-sm">
-                <p className="text-xs text-blue-600 uppercase tracking-widest font-bold mb-4">You will speak about:</p>
-                <div className="text-2xl md:text-3xl font-serif font-medium text-blue-900 leading-snug mb-6">
+              <div className="mb-4 sm:mb-8 p-4 sm:p-10 bg-blue-50 border border-blue-200 rounded-3xl sm:rounded-[40px] shadow-sm">
+                <p className="text-[10px] sm:text-xs text-blue-600 uppercase tracking-widest font-bold mb-2 sm:mb-4">You will speak about:</p>
+                <div className="text-base sm:text-2xl md:text-3xl font-serif font-medium text-blue-900 leading-snug mb-3 sm:mb-6">
                   {topicPrompt.text}
                 </div>
-                <div className="flex flex-wrap justify-center gap-3">
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-sans font-bold uppercase tracking-wider">{topicPrompt.category}</span>
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-sans font-bold uppercase tracking-wider">{topicPrompt.difficulty}</span>
-                  <span className="px-3 py-1 bg-blue-600 text-white rounded-full text-[10px] font-sans font-bold uppercase tracking-wider flex items-center gap-1">
-                    <Timer size={12} />
+                <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
+                  <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-blue-100 text-blue-700 rounded-full text-[8px] sm:text-[10px] font-sans font-bold uppercase tracking-wider">{topicPrompt.category}</span>
+                  <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-blue-100 text-blue-700 rounded-full text-[8px] sm:text-[10px] font-sans font-bold uppercase tracking-wider">{topicPrompt.difficulty}</span>
+                  <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-blue-600 text-white rounded-full text-[8px] sm:text-[10px] font-sans font-bold uppercase tracking-wider flex items-center gap-0.5 sm:gap-1">
+                    <Timer size={10} className="sm:hidden" />
+                    <Timer size={12} className="hidden sm:block" />
                     120s
                   </span>
                 </div>
@@ -345,26 +349,28 @@ export default function Practice() {
             )}
 
             {mode === 'free' && (
-              <div className="mb-8 py-10">
-                <div className="w-24 h-24 bg-sage-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Mic size={40} className="text-sage-500" />
+              <div className="mb-4 sm:mb-8 py-6 sm:py-10">
+                <div className="w-16 sm:w-24 h-16 sm:h-24 bg-sage-50 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                  <Mic size={24} className="sm:hidden text-sage-500" />
+                  <Mic size={40} className="hidden sm:block text-sage-500" />
                 </div>
-                <p className="text-xl font-serif text-foreground max-w-md mx-auto leading-relaxed">
+                <p className="text-base sm:text-xl font-serif text-foreground max-w-md mx-auto leading-relaxed text-center px-2">
                   Speak freely without time limits. Focus on continuous speech and minimizing pauses.
                 </p>
               </div>
             )}
           </div>
 
-          <div className="relative min-h-[100px] flex items-center justify-center">
+          <div className="relative min-h-[80px] sm:min-h-[100px] flex items-center justify-center">
             {state === 'setup' ? (
-              <div className="flex flex-col md:flex-row items-center justify-center gap-4 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full animate-in fade-in slide-in-from-bottom-4 duration-500 px-2">
                 {(mode === 'lemon' || mode === 'topic') && (
                   <button
                     onClick={handleRandomPrompt}
-                    className="w-full md:w-auto px-8 py-4 rounded-full bg-white border border-sand-300 hover:bg-sand-50 text-foreground font-sans font-bold btn-press flex items-center justify-center gap-2 shadow-sm"
+                    className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-full bg-white border border-sand-300 hover:bg-sand-50 text-foreground font-sans font-bold btn-press flex items-center justify-center gap-2 shadow-sm text-sm sm:text-base"
                   >
-                    <Sparkles size={18} className="text-sage-500" />
+                    <Sparkles size={16} className="sm:hidden text-sage-500" />
+                    <Sparkles size={18} className="hidden sm:block text-sage-500" />
                     Randomize
                   </button>
                 )}
@@ -373,14 +379,15 @@ export default function Practice() {
                   data-testid="start-recording-btn"
                   onClick={handleStart}
                   disabled={micPermission === 'denied'}
-                  className="w-full md:w-auto px-10 py-4 rounded-full bg-sage-600 hover:bg-sage-700 disabled:bg-sand-300 text-white font-sans font-bold btn-press flex items-center justify-center gap-2 shadow-md shadow-sage-200"
+                  className="w-full sm:w-auto px-8 sm:px-10 py-3 sm:py-4 rounded-full bg-sage-600 hover:bg-sage-700 disabled:bg-sand-300 text-white font-sans font-bold btn-press flex items-center justify-center gap-2 shadow-md shadow-sage-200 text-sm sm:text-base"
                 >
-                  <Mic size={20} />
+                  <Mic size={18} className="sm:hidden" />
+                  <Mic size={20} className="hidden sm:block" />
                   Start Speaking
                 </button>
               </div>
             ) : (
-              <div className="text-9xl font-serif font-bold text-sage-600 animate-in zoom-in duration-300">
+              <div className="text-6xl sm:text-9xl font-serif font-bold text-sage-600 animate-in zoom-in duration-300">
                 {countdown}
               </div>
             )}
@@ -390,63 +397,66 @@ export default function Practice() {
 
 
       {state === 'recording' && (
-        <div className="flex flex-col items-center max-w-2xl mx-auto animate-in fade-in duration-700">
+        <div className="flex flex-col items-center max-w-2xl mx-auto animate-in fade-in duration-700 px-2">
           {/* Active Prompt Card */}
-          <div className="w-full mb-10">
+          <div className="w-full mb-6 sm:mb-10">
             {mode === 'lemon' && (
-              <div className="p-10 bg-yellow-50/50 border-2 border-yellow-200 rounded-[40px] shadow-lg shadow-yellow-100/30 relative overflow-hidden backdrop-blur-sm">
-                <div className="absolute top-0 right-0 p-6">
-                  <div className="flex items-center gap-2 px-4 py-1.5 bg-yellow-400 text-yellow-900 rounded-full text-sm font-bold font-sans shadow-sm">
-                    <Timer size={16} className="animate-pulse" />
+              <div className="p-4 sm:p-10 bg-yellow-50/50 border-2 border-yellow-200 rounded-3xl sm:rounded-[40px] shadow-lg shadow-yellow-100/30 relative overflow-hidden backdrop-blur-sm">
+                <div className="absolute top-0 right-0 p-2 sm:p-6">
+                  <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-1.5 bg-yellow-400 text-yellow-900 rounded-full text-xs sm:text-sm font-bold font-sans shadow-sm">
+                    <Timer size={12} className="sm:hidden animate-pulse" />
+                    <Timer size={16} className="hidden sm:block animate-pulse" />
                     {formatTime(timeLeft)}
                   </div>
                 </div>
-                <p className="text-[10px] text-yellow-600 uppercase tracking-widest font-black mb-3">Topic focus:</p>
-                <div className="text-4xl md:text-5xl font-serif font-bold text-yellow-900">
+                <p className="text-[8px] sm:text-[10px] text-yellow-600 uppercase tracking-widest font-black mb-2 sm:mb-3">Topic focus:</p>
+                <div className="text-2xl sm:text-4xl md:text-5xl font-serif font-bold text-yellow-900 break-words">
                   {lemonWord}
                 </div>
               </div>
             )}
 
             {mode === 'topic' && topicPrompt && (
-              <div className="p-10 bg-blue-50/50 border-2 border-blue-200 rounded-[40px] shadow-lg shadow-blue-100/30 relative overflow-hidden backdrop-blur-sm">
-                <div className="absolute top-0 right-0 p-6">
-                  <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-600 text-white rounded-full text-sm font-bold font-sans shadow-sm">
-                    <Timer size={16} className="animate-pulse" />
+              <div className="p-4 sm:p-10 bg-blue-50/50 border-2 border-blue-200 rounded-3xl sm:rounded-[40px] shadow-lg shadow-blue-100/30 relative overflow-hidden backdrop-blur-sm">
+                <div className="absolute top-0 right-0 p-2 sm:p-6">
+                  <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-1.5 bg-blue-600 text-white rounded-full text-xs sm:text-sm font-bold font-sans shadow-sm">
+                    <Timer size={12} className="sm:hidden animate-pulse" />
+                    <Timer size={16} className="hidden sm:block animate-pulse" />
                     {formatTime(timeLeft)}
                   </div>
                 </div>
-                <p className="text-[10px] text-blue-600 uppercase tracking-widest font-black mb-3">Responding to:</p>
-                <div className="text-xl md:text-2xl font-serif font-medium text-blue-900 leading-snug">
+                <p className="text-[8px] sm:text-[10px] text-blue-600 uppercase tracking-widest font-black mb-2 sm:mb-3">Responding to:</p>
+                <div className="text-base sm:text-xl md:text-2xl font-serif font-medium text-blue-900 leading-snug">
                   {topicPrompt.text}
                 </div>
               </div>
             )}
 
             {mode === 'free' && (
-              <div className="p-10 bg-sage-50/50 border-2 border-sage-200 rounded-[40px] shadow-lg shadow-sage-100/30 relative overflow-hidden backdrop-blur-sm text-center">
-                <div className="absolute top-0 right-0 p-6">
-                  <div className="flex items-center gap-2 px-4 py-1.5 bg-sage-600 text-white rounded-full text-sm font-bold font-sans shadow-sm">
-                    <Timer size={16} className="animate-pulse" />
+              <div className="p-4 sm:p-10 bg-sage-50/50 border-2 border-sage-200 rounded-3xl sm:rounded-[40px] shadow-lg shadow-sage-100/30 relative overflow-hidden backdrop-blur-sm text-center">
+                <div className="absolute top-0 right-0 p-2 sm:p-6">
+                  <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1 sm:py-1.5 bg-sage-600 text-white rounded-full text-xs sm:text-sm font-bold font-sans shadow-sm">
+                    <Timer size={12} className="sm:hidden animate-pulse" />
+                    <Timer size={16} className="hidden sm:block animate-pulse" />
                     {formatTime(sessionDataRef.current?.startTime ? Math.floor((Date.now() - sessionDataRef.current.startTime) / 1000) : 0)}
                   </div>
                 </div>
-                <p className="text-[10px] text-sage-600 uppercase tracking-widest font-black mb-3">Free Speak</p>
-                <p className="text-xl font-serif text-sage-900 italic">"Maintain your flow and speak freely..."</p>
+                <p className="text-[8px] sm:text-[10px] text-sage-600 uppercase tracking-widest font-black mb-2 sm:mb-3">Free Speak</p>
+                <p className="text-base sm:text-xl font-serif text-sage-900 italic">"Maintain your flow and speak freely..."</p>
               </div>
             )}
           </div>
 
           {/* Audio Visualization - Focused */}
-          <div className="w-full mb-12">
-            <div className="flex items-center justify-center gap-2 mb-6">
-              <div className={cn("w-2 h-2 rounded-full", isListening ? "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]" : "bg-gray-300")}></div>
-              <p className="text-[10px] font-black text-muted-foreground font-sans uppercase tracking-[0.2em]">
+          <div className="w-full mb-8 sm:mb-12">
+            <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-4 sm:mb-6">
+              <div className={cn("w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full", isListening ? "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]" : "bg-gray-300")}></div>
+              <p className="text-[8px] sm:text-[10px] font-black text-muted-foreground font-sans uppercase tracking-[0.2em]">
                 {soundDetectedRef.current ? "Analyzing Speech" : "Waiting for sound"}
               </p>
             </div>
 
-            <div className="h-44 flex items-center justify-center bg-white border border-sand-200 rounded-[50px] shadow-inner-lg overflow-hidden">
+            <div className="h-32 sm:h-44 flex items-center justify-center bg-white border border-sand-200 rounded-3xl sm:rounded-[50px] shadow-inner-lg overflow-hidden">
               {audioData ? (
                 <VoiceVisualizer
                   frequencyData={audioData.frequencyData}
@@ -455,7 +465,10 @@ export default function Practice() {
                   isRecording={true}
                 />
               ) : (
-                <Mic size={40} className="text-sand-200 animate-pulse" />
+                <>
+                  <Mic size={24} className="sm:hidden text-sand-200 animate-pulse" />
+                  <Mic size={40} className="hidden sm:block text-sand-200 animate-pulse" />
+                </>
               )}
             </div>
           </div>
@@ -464,9 +477,10 @@ export default function Practice() {
           <button
             data-testid="stop-recording-btn"
             onClick={handleStop}
-            className="w-full md:w-auto px-16 py-5 rounded-full bg-red-500 hover:bg-red-600 text-white font-sans font-black text-lg btn-press shadow-2xl shadow-red-200 flex items-center justify-center gap-4 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full sm:w-auto px-8 sm:px-16 py-3 sm:py-5 rounded-full bg-red-500 hover:bg-red-600 text-white font-sans font-black text-base sm:text-lg btn-press shadow-2xl shadow-red-200 flex items-center justify-center gap-2 sm:gap-4 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
-            <Square size={20} fill="white" className="rounded-sm" />
+            <Square size={16} className="sm:hidden" fill="white" className="rounded-sm" />
+            <Square size={20} className="hidden sm:block" fill="white" className="rounded-sm" />
             Finish & View Results
           </button>
         </div>
