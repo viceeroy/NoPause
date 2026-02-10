@@ -12,12 +12,21 @@ export default function Stats() {
   const [lemonScores, setLemonScores] = useState([]);
   const [topicScores, setTopicScores] = useState([]);
   const [stats, setStats] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
     setSessions(storage.getSessions());
     setLemonScores(storage.getLemonScores());
     setTopicScores(storage.getTopicScores());
     setStats(storage.getStats());
+
+    // Handle window resize for responsive chart
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const handleDelete = (id, mode) => {
@@ -71,7 +80,9 @@ export default function Stats() {
   const allSessionsCombined = [...sessions, ...lemonScores, ...topicScores]
     .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
-  const multiLineData = allSessionsCombined.slice(-10).map((s, i) => {
+  // Responsive chart data: 5 on mobile, 10 on desktop
+  const chartSessionCount = isMobile ? 5 : 10;
+  const multiLineData = allSessionsCombined.slice(-chartSessionCount).map((s, i) => {
     const score = s.flowScore || s.hesitation_score || 0;
 
     // Calculate rolling overall average
@@ -234,7 +245,7 @@ export default function Stats() {
           </div>
 
           <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={300}>
               <LineChart data={multiLineData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0EFEA" />
                 <XAxis
@@ -297,14 +308,15 @@ export default function Stats() {
         <>
           {/* Sessions List */}
           <div className="stagger-children space-y-3">
-            {[...allSessionsCombined].reverse().map((session) => {
+            {[...allSessionsCombined].reverse().map((session, index) => {
+              const uniqueKey = session.id || session.created_at || `session-${index}`;
               const score = session.flowScore || session.hesitation_score || 0;
               const displayMode = session.mode === 'free-speak' || session.mode === 'free' ? 'Free' : (session.mode === 'lemon' ? 'Lemon' : 'Topic');
               const sessionTitle = session.word || session.topic || (session.mode === 'free-speak' || session.mode === 'free' ? 'Continuous Talk' : 'Speaking Practice');
 
               return (
                 <div
-                  key={session.id || session.created_at}
+                  key={uniqueKey}
                   data-testid={`session-${session.id}`}
                   className="rounded-2xl bg-white border border-sand-300/50 shadow-card p-5 flex items-center gap-5 card-hover"
                 >

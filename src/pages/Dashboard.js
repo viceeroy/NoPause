@@ -6,15 +6,16 @@ import { SPEAKING_PROMPTS, RANDOM_WORDS } from '@/lib/prompts';
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 
 const StatCard = ({ icon: Icon, label, value, sub, className, testId }) => (
-  <div data-testid={testId} className={`card-hover rounded-3xl p-6 ${className}`}>
-    <div className="flex items-start justify-between mb-4">
-      <div className="p-2.5 rounded-2xl bg-white/60">
-        <Icon size={20} className="text-sage-600" />
+  <div data-testid={testId} className={`card-hover rounded-3xl p-3 md:p-6 ${className}`}>
+    <div className="flex items-start justify-between mb-3 md:mb-4">
+      <div className="p-1.5 md:p-2.5 rounded-2xl bg-white/60">
+        <Icon size={16} className="text-sage-600 md:hidden" />
+        <Icon size={20} className="text-sage-600 hidden md:block" />
       </div>
     </div>
-    <p className="text-3xl font-serif font-medium text-foreground">{value}</p>
-    <p className="text-sm text-muted-foreground mt-1 font-sans">{label}</p>
-    {sub && <p className="text-xs text-muted-foreground/70 mt-0.5">{sub}</p>}
+    <p className="text-xl md:text-3xl font-serif font-medium text-foreground">{value}</p>
+    <p className="text-xs md:text-sm text-muted-foreground mt-1 font-sans">{label}</p>
+    {sub && <p className="text-[10px] md:text-xs text-muted-foreground/70 mt-0.5">{sub}</p>}
   </div>
 );
 
@@ -73,75 +74,75 @@ export default function Dashboard() {
       </div>
 
       {/* Speaking Area */}
-      <div className="mb-16">
-        {/* Free Speaking Block */}
+      <div className="flex flex-col mb-16">
+        {/* Free Speaking Block - Always on top */}
         <div
           data-testid="free-speak-card"
           onClick={() => handleCardClick('free')}
-          className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-12 mb-8 text-center cursor-pointer card-hover btn-press relative overflow-hidden group"
+          className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-8 md:p-12 mb-6 md:mb-8 text-center cursor-pointer card-hover btn-press relative overflow-hidden group"
         >
           <div className="flex justify-center mb-6">
-            <div className="relative w-32 h-32 rounded-full flex items-center justify-center bg-sage-50 transition-transform duration-300 group-hover:scale-110">
+            <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-full flex items-center justify-center bg-sage-50 transition-transform duration-300 group-hover:scale-110">
               <div className="absolute inset-0 rounded-full animate-pulse bg-sage-400 opacity-20"></div>
-              <Mic size={56} className="text-sage-600 relative z-10" />
+              <Mic size={40} className="md:size-[56px] text-sage-600 relative z-10" />
             </div>
           </div>
 
-          <h3 className="text-2xl font-serif text-foreground mb-1">Free Speaking</h3>
-          <p className="text-base text-muted-foreground font-sans">Practice continuous speaking without time limits</p>
+          <h3 className="text-xl md:text-2xl font-serif text-foreground mb-1">Free Speaking</h3>
+          <p className="text-sm md:text-base text-muted-foreground font-sans">Practice continuous speaking without time limits</p>
         </div>
 
-        {/* Side-by-side blocks */}
-        <div className="grid md:grid-cols-2 gap-8">
+        {/* Lemon and Topic Cards Grid - Always below */}
+        <div className="grid grid-cols-2 gap-4 md:gap-8">
           {/* Lemon Technique */}
           <div
             onClick={() => handleCardClick('lemon')}
-            className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-8 text-center cursor-pointer card-hover btn-press relative overflow-hidden group"
+            className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-4 md:p-8 text-center cursor-pointer card-hover btn-press relative overflow-hidden group"
           >
-            <div className="flex items-center gap-3 mb-6 text-left">
-              <div className="p-2.5 rounded-2xl bg-yellow-100">
-                <Timer size={20} className="text-yellow-600" />
+            <div className="flex flex-col md:flex-row items-center md:items-start gap-3 mb-4 md:mb-6 text-center md:text-left">
+              <div className="p-2 md:p-2.5 rounded-2xl bg-yellow-100">
+                <Timer size={18} className="text-yellow-600" />
               </div>
               <div>
-                <h3 className="text-xl font-serif text-foreground mb-1">Lemon Technique</h3>
-                <p className="text-sm text-muted-foreground font-sans">1 minute pressure speaking</p>
+                <h3 className="text-lg md:text-xl font-serif text-foreground mb-0.5 md:mb-1">Lemon Technique</h3>
+                <p className="text-[10px] md:text-sm text-muted-foreground font-sans">1m pressure speak</p>
               </div>
             </div>
 
-            <div className="py-8 bg-yellow-50/50 rounded-2xl mb-4 border border-yellow-100 flex items-center justify-center gap-2">
-              <Sparkles size={20} className="text-yellow-500 opacity-60" />
-              <p className="text-sm text-yellow-800 font-sans font-medium italic">Random word challenge</p>
+            <div className="py-4 md:py-8 bg-yellow-50/50 rounded-2xl mb-4 border border-yellow-100 flex items-center justify-center gap-2">
+              <Sparkles size={16} className="text-yellow-500 opacity-60" />
+              <p className="text-[11px] md:text-sm text-yellow-800 font-sans font-medium italic">Random word</p>
             </div>
 
             <div className="text-center">
-              <div className="text-2xl font-serif font-medium text-foreground mb-1">1:00</div>
-              <p className="text-xs text-muted-foreground font-sans uppercase tracking-widest">Time Limit</p>
+              <div className="text-xl md:text-2xl font-serif font-medium text-foreground mb-0.5 md:mb-1">1:00</div>
+              <p className="text-[10px] text-muted-foreground font-sans uppercase tracking-widest">Time Limit</p>
             </div>
           </div>
 
           {/* Topic Speaking */}
           <div
             onClick={() => handleCardClick('topic')}
-            className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-8 text-center cursor-pointer card-hover btn-press relative overflow-hidden group"
+            className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-4 md:p-8 text-center cursor-pointer card-hover btn-press relative overflow-hidden group"
           >
-            <div className="flex items-center gap-3 mb-6 text-left">
-              <div className="p-2.5 rounded-2xl bg-blue-100">
-                <Target size={20} className="text-blue-600" />
+            <div className="flex flex-col md:flex-row items-center md:items-start gap-3 mb-4 md:mb-6 text-center md:text-left">
+              <div className="p-2 md:p-2.5 rounded-2xl bg-blue-100">
+                <Target size={18} className="text-blue-600" />
               </div>
               <div>
-                <h3 className="text-xl font-serif text-foreground mb-1">Topic Score</h3>
-                <p className="text-sm text-muted-foreground font-sans">2 minute critical thinking</p>
+                <h3 className="text-lg md:text-xl font-serif text-foreground mb-0.5 md:mb-1">Topic Score</h3>
+                <p className="text-[10px] md:text-sm text-muted-foreground font-sans">2m critical thinking</p>
               </div>
             </div>
 
-            <div className="py-8 bg-blue-50/50 rounded-2xl mb-4 border border-blue-100 flex items-center justify-center gap-2">
-              <Sparkles size={20} className="text-blue-500 opacity-60" />
-              <p className="text-sm text-blue-800 font-sans font-medium italic">Random topic challenge</p>
+            <div className="py-4 md:py-8 bg-blue-50/50 rounded-2xl mb-4 border border-blue-100 flex items-center justify-center gap-2">
+              <Sparkles size={16} className="text-blue-500 opacity-60" />
+              <p className="text-[11px] md:text-sm text-blue-800 font-sans font-medium italic">Random topic</p>
             </div>
 
             <div className="text-center">
-              <div className="text-2xl font-serif font-medium text-foreground mb-1">2:00</div>
-              <p className="text-xs text-muted-foreground font-sans uppercase tracking-widest">Time Limit</p>
+              <div className="text-xl md:text-2xl font-serif font-medium text-foreground mb-0.5 md:mb-1">2:00</div>
+              <p className="text-[10px] text-muted-foreground font-sans uppercase tracking-widest">Time Limit</p>
             </div>
           </div>
         </div>
@@ -189,22 +190,22 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3 md:gap-4">
         <button
           data-testid="view-prompts-btn"
           onClick={() => navigate('/prompts')}
-          className="rounded-2xl bg-white border border-sand-300/50 shadow-card p-5 text-left card-hover btn-press"
+          className="rounded-2xl bg-white border border-sand-300/50 shadow-card p-3 md:p-5 text-left card-hover btn-press"
         >
-          <p className="font-serif text-lg text-foreground mb-1">Speaking Prompts</p>
-          <p className="text-sm text-muted-foreground font-sans">Get topic ideas</p>
+          <p className="text-sm md:text-lg font-serif text-foreground mb-1">Speaking Prompts</p>
+          <p className="text-xs md:text-sm text-muted-foreground font-sans">Get topic ideas</p>
         </button>
         <button
           data-testid="view-history-btn"
           onClick={() => navigate('/stats')}
-          className="rounded-2xl bg-white border border-sand-300/50 shadow-card p-5 text-left card-hover btn-press"
+          className="rounded-2xl bg-white border border-sand-300/50 shadow-card p-3 md:p-5 text-left card-hover btn-press"
         >
-          <p className="font-serif text-lg text-foreground mb-1">View Stats</p>
-          <p className="text-sm text-muted-foreground font-sans">Track your progress</p>
+          <p className="text-sm md:text-lg font-serif text-foreground mb-1">View Stats</p>
+          <p className="text-xs md:text-sm text-muted-foreground font-sans">Track your progress</p>
         </button>
       </div>
     </div>
