@@ -77,13 +77,13 @@ export default function Dashboard() {
 
       {/* Speaking Area */}
       <div className="mb-8 sm:mb-16">
-        {/* Grid layout: Free Speaking takes full width, Lemon and Topic below in 2 columns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
-          {/* Free Speaking Block - spans full width on mobile, left column on desktop */}
+        {/* Grid layout: All 3 cards in 2-column layout */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8">
+          {/* Free Speaking Block */}
           <div
             data-testid="free-speak-card"
             onClick={() => handleCardClick('free')}
-            className="md:col-span-1 rounded-2xl sm:rounded-3xl bg-white border border-sand-300/50 shadow-card p-6 sm:p-8 text-center cursor-pointer card-hover btn-press relative overflow-hidden group"
+            className="rounded-2xl sm:rounded-3xl bg-white border border-sand-300/50 shadow-card p-6 sm:p-8 text-center cursor-pointer card-hover btn-press relative overflow-hidden group"
           >
             <div className="flex justify-center mb-3 sm:mb-6">
               <div className="relative w-20 sm:w-28 h-20 sm:h-28 rounded-full flex items-center justify-center bg-sage-50 transition-transform duration-300 group-hover:scale-110">

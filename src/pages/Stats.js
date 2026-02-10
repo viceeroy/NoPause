@@ -92,7 +92,7 @@ export default function Stats() {
       <p className="text-sm sm:text-base text-muted-foreground font-sans mb-6 sm:mb-10">Your speaking performance metrics.</p>
 
       {/* New Metrics Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-8 sm:mb-12">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-8 sm:mb-12">
         {/* Overall Flow Score */}
         <div className="rounded-lg sm:rounded-xl bg-gradient-to-br from-sage-500 to-sage-600 text-white border border-sage-400/50 shadow-card p-3 sm:p-4">
           <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
