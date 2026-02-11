@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, Trash2, TrendingUp, Calendar, Timer, Target, BarChart3, Flame, Zap } from 'lucide-react';
-import { storage } from '@/lib/storage';
-import { AudioAnalyzer } from '@/lib/audioAnalyzer';
+import { storage } from '@/storage/localStore';
+import { AudioAnalyzer } from '@/audio/speechAnalyzer';
 import { LineChart, Line, AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/cn';
+import { analytics } from '@/analytics';
 
 export default function Stats() {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ export default function Stats() {
     setLemonScores(storage.getLemonScores());
     setTopicScores(storage.getTopicScores());
     setStats(storage.getStats());
+    analytics.statsViewed();
 
     // Handle window resize for responsive chart
     const handleResize = () => {

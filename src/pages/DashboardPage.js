@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mic, Flame, Target, Clock, TrendingUp, Shield, Zap, Sparkles, Timer } from 'lucide-react';
-import { storage } from '@/lib/storage';
-import { SPEAKING_PROMPTS, RANDOM_WORDS } from '@/lib/prompts';
+import { storage } from '@/storage/localStore';
+import { SPEAKING_PROMPTS, RANDOM_WORDS } from '@/data/speakingPrompts';
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
+import { analytics } from '@/analytics';
 
 const StatCard = ({ icon: Icon, label, value, sub, className, testId }) => (
   <div data-testid={testId} className={`card-hover rounded-3xl p-3 md:p-6 ${className}`}>
@@ -35,6 +36,7 @@ export default function Dashboard() {
 
   // Navigation handlers
   const handleCardClick = (mode) => {
+    analytics.modeSelected(mode);
     if (mode === 'free') {
       navigate('/practice/free-speaking');
     } else if (mode === 'lemon') {

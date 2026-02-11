@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SPEAKING_PROMPTS, CATEGORIES, DIFFICULTY_COLORS } from '@/lib/prompts';
+import { SPEAKING_PROMPTS, CATEGORIES, DIFFICULTY_COLORS } from '@/data/speakingPrompts';
 import { Play, Shuffle, BookOpen } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/cn';
 
 export default function Prompts() {
   const navigate = useNavigate();

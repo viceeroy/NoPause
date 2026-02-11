@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Home, BookOpen, BarChart3 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/cn';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Home' },

@@ -85,11 +85,11 @@ export const storage = {
       const data = localStorage.getItem(PREFS_KEY);
       return data ? JSON.parse(data) : {
         defaultTimer: 60,
-        silenceThreshold: 0.015,
-        hesitationMinDuration: 400,
+        silenceThreshold: 0.008,
+        hesitationMinDuration: 1800,
       };
     } catch {
-      return { defaultTimer: 60, silenceThreshold: 0.015, hesitationMinDuration: 400 };
+      return { defaultTimer: 60, silenceThreshold: 0.008, hesitationMinDuration: 1800 };
     }
   },
 
@@ -119,7 +119,7 @@ export const storage = {
     }
 
     const totalPracticeTime = allSessions.reduce((sum, s) => sum + (s.duration || s.totalSessionTime || 0), 0);
-    const avgScore = Math.round(sessions.reduce((sum, s) => sum + (s.hesitation_score || s.flowScore || 0), 0) / (sessions.length || 1));
+    const avgScore = Math.round(allSessions.reduce((sum, s) => sum + (s.hesitation_score || s.flowScore || 0), 0) / (allSessions.length || 1));
     const bestScore = Math.max(...allSessions.map(s => s.hesitation_score || s.flowScore || 0));
 
     const recentTrend = allSessions

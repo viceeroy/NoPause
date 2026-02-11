@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Mic, MicOff, Square, Play, ChevronLeft, AlertTriangle, Timer, Zap, Volume2, FileText, Sparkles } from 'lucide-react';
-import { AudioAnalyzer } from '@/lib/audioAnalyzer';
-import { AudioVisualizer } from '@/components/ui/AudioVisualizer';
-import { VoiceVisualizer } from '@/components/ui/VoiceVisualizer';
-import { storage } from '@/lib/storage';
-import { SPEAKING_PROMPTS, RANDOM_WORDS } from '@/lib/prompts';
-import { cn } from '@/lib/utils';
+import { AudioAnalyzer } from '@/audio/speechAnalyzer';
+import { AudioVisualizer } from '@/ui/AudioVisualizer';
+import { VoiceVisualizer } from '@/ui/VoiceVisualizer';
+import { storage } from '@/storage/localStore';
+import { SPEAKING_PROMPTS, RANDOM_WORDS } from '@/data/speakingPrompts';
+import { cn } from '@/utils/cn';
+import { analytics } from '@/analytics';
 
 
 export default function Practice() {
@@ -56,6 +57,11 @@ export default function Practice() {
     }
   }, [mode, word, promptId]);
 
+  // Track setup view
+  useEffect(() => {
+    analytics.sessionSetupViewed(mode);
+  }, [mode]);
+
   const stopRecording = useCallback(async () => {
     if (analyzerRef.current && analyzerRef.current.isRunning) {
       const results = await analyzerRef.current.stop();
@@ -67,16 +73,14 @@ export default function Practice() {
         clearInterval(timerRef.current);
       }
 
-      // Calculate flow score
-      // silenceTime is in ms, duration is in s. convert silence to s.
-      const silenceSeconds = results.totalSilenceTime / 1000;
-      const flowScore = Math.max(0, Math.min(100, Math.round(100 - (results.hesitationCount * 5) - (silenceSeconds * 10))));
+      // Calculate flow score — uses only hesitation-level silence (not all silence)
+      const flowScore = AudioAnalyzer.calculateFlowScore(results.hesitationSilenceTime, results.hesitationCount);
 
       const sessionResult = {
         flowScore,
-        totalSpeakingTime: results.totalSpeakingTime, // Use accurate speaking time from analyzer
+        totalSpeakingTime: results.totalSpeakingTime, // seconds (delta-time accumulated)
         totalSessionTime: duration,
-        silenceTime: Math.round(results.totalSilenceTime / 1000), // Convert ms to seconds
+        silenceTime: results.totalSilenceTime, // seconds (delta-time accumulated)
         hesitationCount: results.hesitationCount,
         mode: mode === 'free' ? 'free-speak' : mode,
         audioBlob: results.audioBlob,
@@ -90,16 +94,15 @@ export default function Practice() {
           duration: duration,
           hesitationCount: results.hesitationCount,
           hesitation_count: results.hesitationCount,
-          silenceTime: Math.round(results.totalSilenceTime / 1000),
-          silence_time: Math.round(results.totalSilenceTime / 1000),
-          duration: duration
+          silenceTime: results.totalSilenceTime,
+          silence_time: results.totalSilenceTime,
         });
       } else if (mode === 'lemon') {
         storage.saveLemonScore({
           ...sessionResult,
           word: lemonWord,
           hesitation_count: results.hesitationCount,
-          silence_time: Math.round(results.totalSilenceTime / 1000),
+          silence_time: results.totalSilenceTime,
           duration: duration
         });
       } else if (mode === 'topic') {
@@ -108,13 +111,22 @@ export default function Practice() {
           topic: topicPrompt.text,
           difficulty: topicPrompt.difficulty,
           hesitation_count: results.hesitationCount,
-          silence_time: Math.round(results.totalSilenceTime / 1000),
+          silence_time: results.totalSilenceTime,
           duration: duration
         });
       }
 
       setLastResults(sessionResult);
       setState('done');
+
+      // Process structured session metrics (Layer 2)
+      const sessionId = sessionDataRef.current.sessionId;
+      analytics.processSessionEnd(results, {
+        sessionId,
+        mode: mode === 'free' ? 'free-speak' : mode,
+      });
+      analytics.recordingStopped(mode, sessionId);
+      analytics.flowScoreCalculated(flowScore, mode);
     }
   }, [mode, lemonWord, topicPrompt]);
 
@@ -125,8 +137,12 @@ export default function Practice() {
       setIsListening(true);
       soundDetectedRef.current = false;
 
+      const sessionId = Date.now().toString(36) + Math.random().toString(36).substr(2, 6);
+      analytics.recordingStarted(mode, sessionId);
+
       sessionDataRef.current = {
         startTime: Date.now(),
+        sessionId,
         mode,
         word: mode === 'lemon' ? lemonWord : null,
         prompt: mode === 'topic' ? topicPrompt : null
@@ -155,15 +171,23 @@ export default function Practice() {
     try {
       setLastResults(null);
 
-      // Initialize audio analyzer
+      // Initialize audio analyzer (thresholds loaded from adaptive profile)
       const analyzer = new AudioAnalyzer({
-        silenceThreshold: 0.01,
-        hesitationMinDuration: 300,
         onData: (data) => {
           setAudioData(data);
           if (data.rms > 0.01) {
             soundDetectedRef.current = true;
           }
+        },
+        onHesitation: (duration, count) => {
+          const sessionId = sessionDataRef.current?.sessionId;
+          const timeSinceStart = sessionDataRef.current?.startTime
+            ? Date.now() - sessionDataRef.current.startTime
+            : 0;
+          analytics.hesitationDetected(duration, count, timeSinceStart, sessionId);
+        },
+        onCalibrated: (ambientNoise, thresholdSet) => {
+          analytics.calibrationCompleted(ambientNoise, thresholdSet);
         }
       });
 
@@ -205,7 +229,11 @@ export default function Practice() {
     if (navigator.permissions && navigator.permissions.query) {
       navigator.permissions.query({ name: 'microphone' }).then(result => {
         setMicPermission(result.state);
-        result.onchange = () => setMicPermission(result.state);
+        if (result.state === 'denied') analytics.micDenied();
+        result.onchange = () => {
+          setMicPermission(result.state);
+          if (result.state === 'denied') analytics.micDenied();
+        };
       }).catch(() => { });
     }
   }, []);
@@ -309,6 +337,18 @@ export default function Practice() {
               </div>
               <p className="text-red-600 text-sm font-sans">
                 Please allow microphone access to practice.
+              </p>
+            </div>
+          )}
+
+          {!transcriptSupported && (
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-2xl w-full max-w-md mx-auto">
+              <div className="flex items-center gap-2 text-yellow-700 mb-2">
+                <AlertTriangle size={16} />
+                <span className="font-sans font-semibold text-sm">Transcript unavailable</span>
+              </div>
+              <p className="text-yellow-700 text-sm font-sans">
+                Your browser doesn't support speech-to-text. Hesitation detection and audio recording will still work.
               </p>
             </div>
           )}
