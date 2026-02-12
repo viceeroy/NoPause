@@ -6,6 +6,7 @@ import { computeSessionMetrics, computeDailyRollup, computeWeeklyRollup } from '
 import { computeImprovementVelocity, computeBehavioralPatterns, generateInsights } from './insightsEngine';
 import { buildCoachingContext, formatCoachingPrompt } from './coachingContext';
 import { computeBenchmarkSnapshot, getBenchmarkConsent, setBenchmarkConsent, getCachedBenchmark, BENCHMARK_PRIVACY_SUMMARY } from './benchmarkEngine';
+import { getPostHogAdapter } from './posthogAdapter';
 
 const { STORES } = analyticsStore;
 
@@ -97,6 +98,27 @@ export const analytics = {
 
     async recordingStopped(mode, sessionId) {
         await this._logEvent('session.completed', { mode }, sessionId);
+        
+        // Send to PostHog (cloud analytics)
+        const postHogAdapter = getPostHogAdapter();
+        if (postHogAdapter.isAvailable()) {
+            // Get session metrics for PostHog
+            const sessionMetrics = await analyticsStore.getAll(STORES.sessionMetrics);
+            const latestMetrics = sessionMetrics
+                .filter(m => m.sessionId === sessionId)
+                .pop();
+            
+            if (latestMetrics) {
+                postHogAdapter.trackSessionCompleted({
+                    mode,
+                    flowScore: latestMetrics.flowScore,
+                    hesitationCount: latestMetrics.hesitationCount,
+                    speakingRatio: latestMetrics.speakingRatio,
+                    micQuality: latestMetrics.micQuality,
+                    duration: latestMetrics.duration
+                });
+            }
+        }
     },
 
     async sessionAbandoned(mode, sessionId, durationSeconds) {
@@ -113,6 +135,12 @@ export const analytics = {
     // Tech events
     async micDenied() {
         await this._logEvent('tech.mic_denied');
+        
+        // Send to PostHog (cloud analytics)
+        const postHogAdapter = getPostHogAdapter();
+        if (postHogAdapter.isAvailable()) {
+            postHogAdapter.trackMicDenied();
+        }
     },
 
     async calibrationCompleted(ambientNoise, thresholdSet) {
@@ -130,6 +158,12 @@ export const analytics = {
 
     async modeSelected(mode) {
         await this._logEvent('nav.mode_selected', { mode });
+        
+        // Send to PostHog (cloud analytics)
+        const postHogAdapter = getPostHogAdapter();
+        if (postHogAdapter.isAvailable()) {
+            postHogAdapter.trackNavigation(mode, 'analytics_nav');
+        }
     },
 
     // Legacy compatibility
@@ -164,6 +198,19 @@ export const analytics = {
                 hesitationsPerMinute: metrics.hesitationsPerMinute,
                 wordsPerMinute: metrics.wordsPerMinute,
             }, metrics.sessionId);
+
+            // Send to PostHog (cloud analytics)
+            const postHogAdapter = getPostHogAdapter();
+            if (postHogAdapter.isAvailable()) {
+                postHogAdapter.trackSessionCompleted({
+                    mode: metrics.mode,
+                    flowScore: metrics.flowScore,
+                    hesitationCount: metrics.hesitationCount,
+                    speakingRatio: metrics.speakingRatio,
+                    micQuality: metrics.micQuality,
+                    duration: metrics.duration
+                });
+            }
 
             return metrics;
         } catch (e) {
