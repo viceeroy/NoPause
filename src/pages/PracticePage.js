@@ -8,6 +8,7 @@ import { storage } from '@/storage/localStore';
 import { SPEAKING_PROMPTS, RANDOM_WORDS } from '@/data/speakingPrompts';
 import { cn } from '@/utils/cn';
 import { analytics } from '@/analytics';
+import { useMobileSpeechRecognition } from '@/hooks/useMobileSpeechRecognition';
 
 
 export default function Practice() {
@@ -32,15 +33,14 @@ export default function Practice() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [countdown, setCountdown] = useState(3);
   const [audioData, setAudioData] = useState(null);
-  const [micPermission, setMicPermission] = useState('unknown');
   const [lastResults, setLastResults] = useState(null);
-  const [isListening, setIsListening] = useState(false);
-  const [transcriptSupported, setTranscriptSupported] = useState(true);
+  const [transcriptError, setTranscriptError] = useState(null);
 
   const analyzerRef = useRef(null);
   const timerRef = useRef(null);
   const sessionDataRef = useRef(null);
   const soundDetectedRef = useRef(false);
+  const speech = useMobileSpeechRecognition({ debug: true, maxAutoRestarts: 5, restartDelayMs: 700 });
 
   // Initialize content based on mode
   useEffect(() => {
@@ -64,9 +64,9 @@ export default function Practice() {
 
   const stopRecording = useCallback(async () => {
     if (analyzerRef.current && analyzerRef.current.isRunning) {
+      speech.stopListening();
       const results = await analyzerRef.current.stop();
       const duration = Math.floor((Date.now() - sessionDataRef.current.startTime) / 1000);
-      setIsListening(false);
 
       // Clear timer
       if (timerRef.current) {
@@ -84,7 +84,7 @@ export default function Practice() {
         hesitationCount: results.hesitationCount,
         mode: mode === 'free' ? 'free-speak' : mode,
         audioBlob: results.audioBlob,
-        transcript: results.transcript
+        transcript: speech.finalTranscript.trim() || speech.transcript.trim() || results.transcript
       };
 
       // Save based on mode
@@ -128,16 +128,35 @@ export default function Practice() {
       analytics.recordingStopped(mode, sessionId);
       analytics.flowScoreCalculated(flowScore, mode);
     }
-  }, [mode, lemonWord, topicPrompt]);
+  }, [mode, lemonWord, topicPrompt, speech]);
 
   const startRecording = useCallback(async () => {
     try {
-      await analyzerRef.current.start();
-      setState('recording');
-      setIsListening(true);
-      soundDetectedRef.current = false;
+      speech.resetTranscript();
+      const started = await analyzerRef.current.start();
+      if (!started) {
+        setTranscriptError('Microphone failed to start. Check browser mic settings and retry.');
+        setState('setup');
+        return;
+      }
 
       const sessionId = Date.now().toString(36) + Math.random().toString(36).substr(2, 6);
+
+      if (speech.isSupported && !speech.isListening) {
+        const transcriptionStarted = await speech.startListening({
+          stream: analyzerRef.current?.stream || null,
+          sessionId,
+          allowServerFallback: true,
+          preferBrowser: true,
+        });
+        if (!transcriptionStarted) {
+          setTranscriptError(speech.errorMessage || 'Speech-to-text failed to start on this device.');
+        }
+      }
+
+      setState('recording');
+      soundDetectedRef.current = false;
+
       analytics.recordingStarted(mode, sessionId);
 
       sessionDataRef.current = {
@@ -164,15 +183,49 @@ export default function Practice() {
       console.error('Error starting recording:', error);
       setState('setup');
     }
-  }, [mode, lemonWord, topicPrompt, stopRecording]);
+  }, [mode, lemonWord, topicPrompt, stopRecording, speech]);
 
   // Start recording process with countdown
   const handleStart = useCallback(async () => {
     try {
       setLastResults(null);
+      setTranscriptError(null);
+      speech.log('session_start_tapped', {
+        userAgent: speech.runtimeInfo.ua,
+        browser: speech.runtimeInfo.browser.name,
+        mobile: speech.runtimeInfo.isMobile,
+        secure: speech.runtimeInfo.isSecure,
+      });
+
+      if (!speech.runtimeInfo.isSecure) {
+        setTranscriptError('Microphone access requires HTTPS on mobile (or localhost for local development).');
+        return;
+      }
+
+      if (!speech.runtimeInfo.hasMediaDevices) {
+        setTranscriptError('This browser does not expose microphone APIs. Try Chrome or Safari.');
+        return;
+      }
+
+      await speech.syncPermissionState();
+      const granted = await speech.requestMicrophoneAccess();
+      if (!granted) {
+        if (speech.permissionState === 'denied') analytics.micDenied();
+        setTranscriptError(speech.errorMessage || 'Microphone permission is required to start.');
+        return;
+      }
+
+      // iOS Safari often requires SpeechRecognition.start() from a user gesture.
+      if (speech.isSupported) {
+        await speech.startListening({
+          allowServerFallback: false,
+          preferBrowser: true,
+        });
+      }
 
       // Initialize audio analyzer (thresholds loaded from adaptive profile)
       const analyzer = new AudioAnalyzer({
+        enableTranscription: false,
         onData: (data) => {
           setAudioData(data);
           if (data.rms > 0.01) {
@@ -188,7 +241,13 @@ export default function Practice() {
         },
         onCalibrated: (ambientNoise, thresholdSet) => {
           analytics.calibrationCompleted(ambientNoise, thresholdSet);
-        }
+        },
+        onStartError: (error) => {
+          setTranscriptError(`Microphone error: ${error?.name || 'unknown'}`);
+        },
+        onDebugLog: (event, details) => {
+          speech.log(`analyzer_${event}`, details);
+        },
       });
 
       analyzerRef.current = analyzer;
@@ -211,7 +270,7 @@ export default function Practice() {
       console.error('Error starting recording:', error);
       setState('setup');
     }
-  }, [startRecording]);
+  }, [startRecording, speech]);
 
   const handleRandomPrompt = () => {
     if (mode === 'lemon') {
@@ -220,23 +279,6 @@ export default function Practice() {
       setTopicPrompt(SPEAKING_PROMPTS[Math.floor(Math.random() * SPEAKING_PROMPTS.length)]);
     }
   };
-
-
-  // Check mic permission and transcript support
-  useEffect(() => {
-    setTranscriptSupported(!!(window.SpeechRecognition || window.webkitSpeechRecognition));
-
-    if (navigator.permissions && navigator.permissions.query) {
-      navigator.permissions.query({ name: 'microphone' }).then(result => {
-        setMicPermission(result.state);
-        if (result.state === 'denied') analytics.micDenied();
-        result.onchange = () => {
-          setMicPermission(result.state);
-          if (result.state === 'denied') analytics.micDenied();
-        };
-      }).catch(() => { });
-    }
-  }, []);
 
   const handleStop = () => {
     stopRecording();
@@ -255,6 +297,7 @@ export default function Practice() {
     if (analyzerRef.current && analyzerRef.current.isRunning) {
       analyzerRef.current.stop();
     }
+    speech.stopListening();
     navigate('/');
   };
 
@@ -300,11 +343,12 @@ export default function Practice() {
           console.error('Error stopping analyzer on cleanup:', error);
         }
       }
+      speech.stopListening();
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
     };
-  }, []);
+  }, [speech]);
 
   // ---- RENDER STATES ----
 
@@ -329,26 +373,50 @@ export default function Practice() {
 
       {(state === 'setup' || state === 'countdown') && (
         <div className="text-center py-10">
-          {micPermission === 'denied' && (
+          {speech.permissionState === 'denied' && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl w-full max-w-md mx-auto">
               <div className="flex items-center gap-2 text-red-600 mb-2">
                 <AlertTriangle size={16} />
                 <span className="font-sans font-semibold text-sm">Microphone access denied</span>
               </div>
               <p className="text-red-600 text-sm font-sans">
-                Please allow microphone access to practice.
+                Please allow microphone access in your browser settings, then retry.
               </p>
             </div>
           )}
 
-          {!transcriptSupported && (
+          {!speech.runtimeInfo.isSecure && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl w-full max-w-md mx-auto">
+              <div className="flex items-center gap-2 text-red-700 mb-2">
+                <AlertTriangle size={16} />
+                <span className="font-sans font-semibold text-sm">HTTPS required on mobile</span>
+              </div>
+              <p className="text-red-700 text-sm font-sans">
+                Use HTTPS (or localhost while developing) to access the microphone.
+              </p>
+            </div>
+          )}
+
+          {!speech.runtimeInfo.hasSpeechRecognition && (
             <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-2xl w-full max-w-md mx-auto">
               <div className="flex items-center gap-2 text-yellow-700 mb-2">
                 <AlertTriangle size={16} />
                 <span className="font-sans font-semibold text-sm">Transcript unavailable</span>
               </div>
               <p className="text-yellow-700 text-sm font-sans">
-                Your browser doesn't support speech-to-text. Hesitation detection and audio recording will still work.
+                Speech-to-text is not supported on this browser. Audio recording and hesitation analysis will still work.
+              </p>
+            </div>
+          )}
+
+          {transcriptError && (
+            <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-2xl w-full max-w-md mx-auto">
+              <div className="flex items-center gap-2 text-orange-700 mb-2">
+                <AlertTriangle size={16} />
+                <span className="font-sans font-semibold text-sm">Transcription warning</span>
+              </div>
+              <p className="text-orange-700 text-sm font-sans">
+                {transcriptError}
               </p>
             </div>
           )}
@@ -412,7 +480,7 @@ export default function Practice() {
                 <button
                   data-testid="start-recording-btn"
                   onClick={handleStart}
-                  disabled={micPermission === 'denied'}
+                  disabled={speech.permissionState === 'denied' || !speech.runtimeInfo.isSecure}
                   className="w-full md:w-auto px-10 py-4 rounded-full bg-sage-600 hover:bg-sage-700 disabled:bg-sand-300 text-white font-sans font-bold btn-press flex items-center justify-center gap-2 shadow-md shadow-sage-200"
                 >
                   <Mic size={20} />
@@ -480,7 +548,7 @@ export default function Practice() {
           {/* Audio Visualization - Focused */}
           <div className="w-full mb-12">
             <div className="flex items-center justify-center gap-2 mb-6">
-              <div className={cn("w-2 h-2 rounded-full", isListening ? "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]" : "bg-gray-300")}></div>
+              <div className={cn("w-2 h-2 rounded-full", speech.isListening ? "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]" : "bg-gray-300")}></div>
               <p className="text-[10px] font-black text-muted-foreground font-sans uppercase tracking-[0.2em]">
                 {soundDetectedRef.current ? "Analyzing Speech" : "Waiting for sound"}
               </p>

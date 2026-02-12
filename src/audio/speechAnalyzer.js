@@ -34,6 +34,10 @@ export class AudioAnalyzer {
     this.onData = options.onData || null;
     this.onHesitation = options.onHesitation || null;
     this.onCalibrated = options.onCalibrated || null;
+    this.onTranscriptError = options.onTranscriptError || null;
+    this.onStartError = options.onStartError || null;
+    this.onDebugLog = options.onDebugLog || null;
+    this.enableTranscription = options.enableTranscription !== false;
     this.animationFrame = null;
     this.mediaRecorder = null;
     this.audioChunks = [];
@@ -71,8 +75,21 @@ export class AudioAnalyzer {
     this.calibrationStartTime = null;
   }
 
+  _debug(event, extra = {}) {
+    if (this.onDebugLog) {
+      this.onDebugLog(event, extra);
+    }
+  }
+
   async start() {
     try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const err = new Error('mediaDevices.getUserMedia is not available');
+        if (this.onStartError) this.onStartError(err);
+        this._debug('analyzer_start_failed', { reason: 'media-devices-unavailable' });
+        return false;
+      }
+
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -116,18 +133,27 @@ export class AudioAnalyzer {
       this.calibrationSamples = [];
       this.isCalibrating = true;
 
+      this._debug('analyzer_stream_started', {
+        trackCount: this.stream.getAudioTracks().length,
+      });
+
       // MediaRecorder
-      this.mediaRecorder = new MediaRecorder(this.stream);
-      this.mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          this.audioChunks.push(event.data);
-        }
-      };
-      this.mediaRecorder.start(100);
+      if (typeof MediaRecorder !== 'undefined') {
+        this.mediaRecorder = new MediaRecorder(this.stream);
+        this.mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            this.audioChunks.push(event.data);
+          }
+        };
+        this.mediaRecorder.start(100);
+      } else {
+        this.mediaRecorder = null;
+        this._debug('media_recorder_unavailable');
+      }
 
       // SpeechRecognition
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (SpeechRecognition) {
+      if (this.enableTranscription && SpeechRecognition) {
         this.recognition = new SpeechRecognition();
         this.recognition.continuous = true;
         this.recognition.interimResults = false;
@@ -141,20 +167,43 @@ export class AudioAnalyzer {
           }
         };
 
-        this.recognition.onerror = () => { };
-        this.recognition.onend = () => {
-          if (this.isRunning && this.recognition) {
-            try { this.recognition.start(); } catch (e) { }
+        this.recognition.onerror = (event) => {
+          console.error('SpeechRecognition error:', event.error);
+          if (this.onTranscriptError) {
+            this.onTranscriptError(event.error);
           }
         };
 
-        try { this.recognition.start(); } catch (e) { }
+        this.recognition.onend = () => {
+          if (this.isRunning && this.recognition) {
+            try {
+              this.recognition.start();
+            } catch (e) {
+              console.error('SpeechRecognition restart failed:', e);
+              if (this.onTranscriptError) {
+                this.onTranscriptError(e);
+              }
+            }
+          }
+        };
+
+        try {
+          this.recognition.start();
+        } catch (e) {
+          console.error('SpeechRecognition start failed:', e);
+          if (this.onTranscriptError) {
+            this.onTranscriptError(e);
+          }
+        }
       }
 
       this._analyze();
+      this._debug('analyzer_started');
       return true;
     } catch (err) {
       console.error('Microphone access denied:', err);
+      if (this.onStartError) this.onStartError(err);
+      this._debug('analyzer_start_failed', { reason: err?.name || 'unknown', message: err?.message });
       return false;
     }
   }
@@ -293,6 +342,7 @@ export class AudioAnalyzer {
 
   async stop() {
     this.isRunning = false;
+    this._debug('analyzer_stopping');
 
     // Final delta
     const now = Date.now();
