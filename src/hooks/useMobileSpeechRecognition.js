@@ -44,6 +44,7 @@ export function useMobileSpeechRecognition(options = {}) {
     serverEndpoint = '/api/transcription/chunk',
     providerHint = 'auto',
     unsupportedBrowsers = ['Samsung Internet', 'Firefox'],
+    enableServerFallback = false,
   } = options;
 
   const [permissionState, setPermissionState] = useState('prompt');
@@ -57,6 +58,7 @@ export function useMobileSpeechRecognition(options = {}) {
   const [runtimeInfo] = useState(() => buildRuntimeInfo());
 
   const engineRef = useRef(null);
+  const didLogInitRef = useRef(false);
 
   const log = useCallback((event, extra = {}) => {
     if (!debug) return;
@@ -168,14 +170,22 @@ export function useMobileSpeechRecognition(options = {}) {
 
   const stopListening = useCallback(async () => {
     const engine = ensureEngine();
-    await engine.stop();
+    await Promise.race([
+      engine.stop(),
+      new Promise((resolve) => setTimeout(resolve, 1500)),
+    ]);
     setIsListening(false);
     setProviderType('idle');
     log('speech_stopped');
   }, [ensureEngine, log]);
 
   const startListening = useCallback(async (startOptions = {}) => {
-    const { stream = null, sessionId = null, allowServerFallback = true, preferBrowser = true } = startOptions;
+    const {
+      stream = null,
+      sessionId = null,
+      allowServerFallback = enableServerFallback,
+      preferBrowser = true
+    } = startOptions;
 
     if (!runtimeInfo.isSecure) {
       setErrorCode('insecure-context');
@@ -210,9 +220,10 @@ export function useMobileSpeechRecognition(options = {}) {
     setIsListening(true);
     setErrorCode(null);
     setErrorMessage(null);
+    console.log('Recognition started');
     log('speech_started', { allowServerFallback, preferBrowser });
     return true;
-  }, [runtimeInfo.isSecure, permissionState, requestMicrophoneAccess, ensureEngine, log]);
+  }, [runtimeInfo.isSecure, permissionState, requestMicrophoneAccess, ensureEngine, log, enableServerFallback]);
 
   const resetTranscript = useCallback(() => {
     const engine = ensureEngine();
@@ -223,8 +234,20 @@ export function useMobileSpeechRecognition(options = {}) {
   }, [ensureEngine]);
 
   useEffect(() => {
+    if (!didLogInitRef.current) {
+      console.log('Speech init');
+      didLogInitRef.current = true;
+    }
     syncPermissionState();
   }, [syncPermissionState]);
+
+  useEffect(() => {
+    console.log('Mic permission:', permissionState);
+  }, [permissionState]);
+
+  useEffect(() => {
+    console.log('Transcript:', transcript);
+  }, [transcript]);
 
   useEffect(() => () => {
     if (engineRef.current) {

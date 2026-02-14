@@ -40,7 +40,12 @@ export default function Practice() {
   const timerRef = useRef(null);
   const sessionDataRef = useRef(null);
   const soundDetectedRef = useRef(false);
-  const speech = useMobileSpeechRecognition({ debug: true, maxAutoRestarts: 5, restartDelayMs: 700 });
+  const speech = useMobileSpeechRecognition({
+    debug: true,
+    maxAutoRestarts: 5,
+    restartDelayMs: 700,
+    enableServerFallback: false,
+  });
 
   // Initialize content based on mode
   useEffect(() => {
@@ -64,9 +69,9 @@ export default function Practice() {
 
   const stopRecording = useCallback(async () => {
     if (analyzerRef.current && analyzerRef.current.isRunning) {
-      speech.stopListening();
       const results = await analyzerRef.current.stop();
       const duration = Math.floor((Date.now() - sessionDataRef.current.startTime) / 1000);
+      speech.stopListening().catch(() => {});
 
       // Clear timer
       if (timerRef.current) {
@@ -132,8 +137,24 @@ export default function Practice() {
 
   const startRecording = useCallback(async () => {
     try {
+      console.log('Speech init');
       speech.resetTranscript();
+
+      // Avoid concurrent mic capture lock: stop any pre-existing recognizer first.
+      if (speech.isListening) {
+        await speech.stopListening();
+      }
+
+      console.log('Analyzer ref current:', analyzerRef.current);
+      if (!analyzerRef.current) {
+        console.error('Analyzer not initialized!');
+        setTranscriptError('Audio analyzer not initialized. Please try again.');
+        setState('setup');
+        return;
+      }
+
       const started = await analyzerRef.current.start();
+      console.log('Analyzer started:', started);
       if (!started) {
         setTranscriptError('Microphone failed to start. Check browser mic settings and retry.');
         setState('setup');
@@ -141,18 +162,6 @@ export default function Practice() {
       }
 
       const sessionId = Date.now().toString(36) + Math.random().toString(36).substr(2, 6);
-
-      if (speech.isSupported && !speech.isListening) {
-        const transcriptionStarted = await speech.startListening({
-          stream: analyzerRef.current?.stream || null,
-          sessionId,
-          allowServerFallback: true,
-          preferBrowser: true,
-        });
-        if (!transcriptionStarted) {
-          setTranscriptError(speech.errorMessage || 'Speech-to-text failed to start on this device.');
-        }
-      }
 
       setState('recording');
       soundDetectedRef.current = false;
@@ -167,11 +176,28 @@ export default function Practice() {
         prompt: mode === 'topic' ? topicPrompt : null
       };
 
-      // Start timer if not free mode
-      if (mode !== 'free') {
+      if (speech.isSupported && !speech.isListening) {
+        speech.startListening({
+          stream: analyzerRef.current?.stream || null,
+          sessionId,
+          allowServerFallback: false,
+          preferBrowser: true,
+        }).then((transcriptionStarted) => {
+          if (!transcriptionStarted) {
+            setTranscriptError(speech.errorMessage || 'Speech-to-text failed to start on this device.');
+          }
+        });
+      }
+
+      // Timer
+      const duration = mode === 'lemon' ? 60 : (mode === 'topic' ? 120 : 0);
+      setTimeLeft(duration);
+
+      if (duration > 0) {
         timerRef.current = setInterval(() => {
           setTimeLeft(prev => {
             if (prev <= 1) {
+              clearInterval(timerRef.current);
               stopRecording();
               return 0;
             }
@@ -180,10 +206,11 @@ export default function Practice() {
         }, 1000);
       }
     } catch (error) {
-      console.error('Error starting recording:', error);
+      console.error('Failed to start recording:', error);
+      setTranscriptError('Failed to start recording. Please try again.');
       setState('setup');
     }
-  }, [mode, lemonWord, topicPrompt, stopRecording, speech]);
+  }, [mode, lemonWord, topicPrompt, speech, stopRecording]);
 
   // Start recording process with countdown
   const handleStart = useCallback(async () => {
@@ -209,18 +236,11 @@ export default function Practice() {
 
       await speech.syncPermissionState();
       const granted = await speech.requestMicrophoneAccess();
+      console.log('Mic permission:', speech.permissionState);
       if (!granted) {
         if (speech.permissionState === 'denied') analytics.micDenied();
         setTranscriptError(speech.errorMessage || 'Microphone permission is required to start.');
         return;
-      }
-
-      // iOS Safari often requires SpeechRecognition.start() from a user gesture.
-      if (speech.isSupported) {
-        await speech.startListening({
-          allowServerFallback: false,
-          preferBrowser: true,
-        });
       }
 
       // Initialize audio analyzer (thresholds loaded from adaptive profile)
@@ -250,7 +270,9 @@ export default function Practice() {
         },
       });
 
+      console.log('Audio analyzer created:', analyzer);
       analyzerRef.current = analyzer;
+      console.log('Analyzer ref set:', analyzerRef.current);
 
       setState('countdown');
       // Countdown
@@ -263,6 +285,7 @@ export default function Practice() {
 
         if (count === 0) {
           clearInterval(countdownInterval);
+          // Call startRecording directly since analyzerRef.current is now set
           startRecording();
         }
       }, 1000);
@@ -354,7 +377,7 @@ export default function Practice() {
 
   // ---- SETUP STATE ----
   return (
-    <div data-testid="practice-page" className="min-h-screen pb-28 px-6 md:px-12 lg:px-20 pt-8 max-w-4xl mx-auto">
+    <div data-testid="practice-page" className="min-h-screen pb-32 px-5 md:px-12 lg:px-20 pt-8 max-w-4xl mx-auto">
       <button
         data-testid="back-to-home"
         onClick={handleBack}
@@ -374,48 +397,48 @@ export default function Practice() {
       {(state === 'setup' || state === 'countdown') && (
         <div className="text-center py-10">
           {speech.permissionState === 'denied' && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl w-full max-w-md mx-auto">
+            <div className="mb-6 p-4 bg-red-950/45 border border-red-500/40 rounded-2xl w-full max-w-md mx-auto">
               <div className="flex items-center gap-2 text-red-600 mb-2">
                 <AlertTriangle size={16} />
-                <span className="font-sans font-semibold text-sm">Microphone access denied</span>
+                <span className="font-sans font-semibold text-sm text-red-200">Microphone access denied</span>
               </div>
-              <p className="text-red-600 text-sm font-sans">
+              <p className="text-red-200/90 text-sm font-sans">
                 Please allow microphone access in your browser settings, then retry.
               </p>
             </div>
           )}
 
           {!speech.runtimeInfo.isSecure && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl w-full max-w-md mx-auto">
-              <div className="flex items-center gap-2 text-red-700 mb-2">
+            <div className="mb-6 p-4 bg-red-950/45 border border-red-500/40 rounded-2xl w-full max-w-md mx-auto">
+              <div className="flex items-center gap-2 text-red-200 mb-2">
                 <AlertTriangle size={16} />
                 <span className="font-sans font-semibold text-sm">HTTPS required on mobile</span>
               </div>
-              <p className="text-red-700 text-sm font-sans">
+              <p className="text-red-200/90 text-sm font-sans">
                 Use HTTPS (or localhost while developing) to access the microphone.
               </p>
             </div>
           )}
 
           {!speech.runtimeInfo.hasSpeechRecognition && (
-            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-2xl w-full max-w-md mx-auto">
-              <div className="flex items-center gap-2 text-yellow-700 mb-2">
+            <div className="mb-6 p-4 bg-amber-900/35 border border-amber-500/40 rounded-2xl w-full max-w-md mx-auto">
+              <div className="flex items-center gap-2 text-amber-200 mb-2">
                 <AlertTriangle size={16} />
                 <span className="font-sans font-semibold text-sm">Transcript unavailable</span>
               </div>
-              <p className="text-yellow-700 text-sm font-sans">
+              <p className="text-amber-200/90 text-sm font-sans">
                 Speech-to-text is not supported on this browser. Audio recording and hesitation analysis will still work.
               </p>
             </div>
           )}
 
           {transcriptError && (
-            <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-2xl w-full max-w-md mx-auto">
-              <div className="flex items-center gap-2 text-orange-700 mb-2">
+            <div className="mb-6 p-4 bg-orange-950/40 border border-orange-500/40 rounded-2xl w-full max-w-md mx-auto">
+              <div className="flex items-center gap-2 text-orange-200 mb-2">
                 <AlertTriangle size={16} />
                 <span className="font-sans font-semibold text-sm">Transcription warning</span>
               </div>
-              <p className="text-orange-700 text-sm font-sans">
+              <p className="text-orange-200/90 text-sm font-sans">
                 {transcriptError}
               </p>
             </div>
@@ -423,12 +446,12 @@ export default function Practice() {
 
           <div className={cn("mb-12 transition-all duration-500", state === 'countdown' && "opacity-30 scale-95 blur-[2px]")}>
             {mode === 'lemon' && (
-              <div className="mb-8 p-10 bg-yellow-50 border border-yellow-200 rounded-[40px] shadow-sm">
-                <p className="text-xs text-yellow-600 uppercase tracking-widest font-bold mb-4">You will speak about:</p>
-                <div className="text-5xl md:text-7xl font-serif font-bold text-yellow-900 mb-6">
+              <div className="mb-8 p-10 bg-ember-200/10 border border-ember-500/35 rounded-[40px] shadow-card">
+                <p className="text-xs text-ember-600 uppercase tracking-widest font-bold mb-4">You will speak about:</p>
+                <div className="text-5xl md:text-7xl font-serif font-bold text-foreground mb-6">
                   {lemonWord}
                 </div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-100 text-yellow-700 rounded-full text-sm font-sans font-bold">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-ember-300/25 text-ember-600 rounded-full text-sm font-sans font-bold border border-ember-500/30">
                   <Timer size={16} />
                   60 Seconds Target
                 </div>
@@ -436,15 +459,15 @@ export default function Practice() {
             )}
 
             {mode === 'topic' && topicPrompt && (
-              <div className="mb-8 p-10 bg-blue-50 border border-blue-200 rounded-[40px] shadow-sm">
-                <p className="text-xs text-blue-600 uppercase tracking-widest font-bold mb-4">You will speak about:</p>
-                <div className="text-2xl md:text-3xl font-serif font-medium text-blue-900 leading-snug mb-6">
+              <div className="mb-8 p-10 bg-cyan-500/10 border border-cyan-400/35 rounded-[40px] shadow-card">
+                <p className="text-xs text-cyan-300 uppercase tracking-widest font-bold mb-4">You will speak about:</p>
+                <div className="text-2xl md:text-3xl font-serif font-medium text-foreground leading-snug mb-6">
                   {topicPrompt.text}
                 </div>
                 <div className="flex flex-wrap justify-center gap-3">
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-sans font-bold uppercase tracking-wider">{topicPrompt.category}</span>
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-sans font-bold uppercase tracking-wider">{topicPrompt.difficulty}</span>
-                  <span className="px-3 py-1 bg-blue-600 text-white rounded-full text-[10px] font-sans font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="px-3 py-1 bg-cyan-500/20 text-cyan-300 rounded-full text-[10px] font-sans font-bold uppercase tracking-wider border border-cyan-400/35">{topicPrompt.category}</span>
+                  <span className="px-3 py-1 bg-cyan-500/20 text-cyan-300 rounded-full text-[10px] font-sans font-bold uppercase tracking-wider border border-cyan-400/35">{topicPrompt.difficulty}</span>
+                  <span className="px-3 py-1 bg-cyan-500 text-slate-950 rounded-full text-[10px] font-sans font-bold uppercase tracking-wider flex items-center gap-1">
                     <Timer size={12} />
                     120s
                   </span>
@@ -454,8 +477,8 @@ export default function Practice() {
 
             {mode === 'free' && (
               <div className="mb-8 py-10">
-                <div className="w-24 h-24 bg-sage-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Mic size={40} className="text-sage-500" />
+                <div className="w-24 h-24 bg-surface-card border border-border/80 rounded-full flex items-center justify-center mx-auto mb-6 night-glow">
+                  <Mic size={40} className="text-primary" />
                 </div>
                 <p className="text-xl font-serif text-foreground max-w-md mx-auto leading-relaxed">
                   Speak freely without time limits. Focus on continuous speech and minimizing pauses.
@@ -470,9 +493,9 @@ export default function Practice() {
                 {(mode === 'lemon' || mode === 'topic') && (
                   <button
                     onClick={handleRandomPrompt}
-                    className="w-full md:w-auto px-8 py-4 rounded-full bg-white border border-sand-300 hover:bg-sand-50 text-foreground font-sans font-bold btn-press flex items-center justify-center gap-2 shadow-sm"
+                    className="w-full md:w-auto px-8 py-4 rounded-full bg-surface-card border border-border hover:bg-surface-elevated text-foreground font-sans font-bold btn-press flex items-center justify-center gap-2 shadow-card"
                   >
-                    <Sparkles size={18} className="text-sage-500" />
+                    <Sparkles size={18} className="text-primary" />
                     Randomize
                   </button>
                 )}
@@ -481,14 +504,14 @@ export default function Practice() {
                   data-testid="start-recording-btn"
                   onClick={handleStart}
                   disabled={speech.permissionState === 'denied' || !speech.runtimeInfo.isSecure}
-                  className="w-full md:w-auto px-10 py-4 rounded-full bg-sage-600 hover:bg-sage-700 disabled:bg-sand-300 text-white font-sans font-bold btn-press flex items-center justify-center gap-2 shadow-md shadow-sage-200"
+                  className="w-full md:w-auto px-10 py-4 rounded-full bg-primary hover:brightness-110 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground font-sans font-bold btn-press flex items-center justify-center gap-2 shadow-soft night-glow"
                 >
                   <Mic size={20} />
                   Start Speaking
                 </button>
               </div>
             ) : (
-              <div className="text-9xl font-serif font-bold text-sage-600 animate-in zoom-in duration-300">
+              <div className="text-9xl font-serif font-bold text-primary animate-in zoom-in duration-300">
                 {countdown}
               </div>
             )}
@@ -502,45 +525,45 @@ export default function Practice() {
           {/* Active Prompt Card */}
           <div className="w-full mb-10">
             {mode === 'lemon' && (
-              <div className="p-10 bg-yellow-50/50 border-2 border-yellow-200 rounded-[40px] shadow-lg shadow-yellow-100/30 relative overflow-hidden backdrop-blur-sm">
+              <div className="p-10 bg-ember-200/10 border-2 border-ember-500/35 rounded-[40px] shadow-card relative overflow-hidden backdrop-blur-sm">
                 <div className="absolute top-0 right-0 p-6">
-                  <div className="flex items-center gap-2 px-4 py-1.5 bg-yellow-400 text-yellow-900 rounded-full text-sm font-bold font-sans shadow-sm">
+                  <div className="flex items-center gap-2 px-4 py-1.5 bg-ember-500 text-slate-950 rounded-full text-sm font-bold font-sans shadow-sm">
                     <Timer size={16} className="animate-pulse" />
                     {formatTime(timeLeft)}
                   </div>
                 </div>
-                <p className="text-[10px] text-yellow-600 uppercase tracking-widest font-black mb-3">Topic focus:</p>
-                <div className="text-4xl md:text-5xl font-serif font-bold text-yellow-900">
+                <p className="text-[10px] text-ember-600 uppercase tracking-widest font-black mb-3">Topic focus:</p>
+                <div className="text-4xl md:text-5xl font-serif font-bold text-foreground">
                   {lemonWord}
                 </div>
               </div>
             )}
 
             {mode === 'topic' && topicPrompt && (
-              <div className="p-10 bg-blue-50/50 border-2 border-blue-200 rounded-[40px] shadow-lg shadow-blue-100/30 relative overflow-hidden backdrop-blur-sm">
+              <div className="p-10 bg-cyan-500/10 border-2 border-cyan-400/35 rounded-[40px] shadow-card relative overflow-hidden backdrop-blur-sm">
                 <div className="absolute top-0 right-0 p-6">
-                  <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-600 text-white rounded-full text-sm font-bold font-sans shadow-sm">
+                  <div className="flex items-center gap-2 px-4 py-1.5 bg-cyan-500 text-slate-950 rounded-full text-sm font-bold font-sans shadow-sm">
                     <Timer size={16} className="animate-pulse" />
                     {formatTime(timeLeft)}
                   </div>
                 </div>
-                <p className="text-[10px] text-blue-600 uppercase tracking-widest font-black mb-3">Responding to:</p>
-                <div className="text-xl md:text-2xl font-serif font-medium text-blue-900 leading-snug">
+                <p className="text-[10px] text-cyan-300 uppercase tracking-widest font-black mb-3">Responding to:</p>
+                <div className="text-xl md:text-2xl font-serif font-medium text-foreground leading-snug">
                   {topicPrompt.text}
                 </div>
               </div>
             )}
 
             {mode === 'free' && (
-              <div className="p-10 bg-sage-50/50 border-2 border-sage-200 rounded-[40px] shadow-lg shadow-sage-100/30 relative overflow-hidden backdrop-blur-sm text-center">
+              <div className="p-10 bg-surface-card border-2 border-border/70 rounded-[40px] shadow-card relative overflow-hidden backdrop-blur-sm text-center">
                 <div className="absolute top-0 right-0 p-6">
-                  <div className="flex items-center gap-2 px-4 py-1.5 bg-sage-600 text-white rounded-full text-sm font-bold font-sans shadow-sm">
+                  <div className="flex items-center gap-2 px-4 py-1.5 bg-primary text-primary-foreground rounded-full text-sm font-bold font-sans shadow-sm">
                     <Timer size={16} className="animate-pulse" />
                     {formatTime(sessionDataRef.current?.startTime ? Math.floor((Date.now() - sessionDataRef.current.startTime) / 1000) : 0)}
                   </div>
                 </div>
-                <p className="text-[10px] text-sage-600 uppercase tracking-widest font-black mb-3">Free Speak</p>
-                <p className="text-xl font-serif text-sage-900 italic">"Maintain your flow and speak freely..."</p>
+                <p className="text-[10px] text-primary uppercase tracking-widest font-black mb-3">Free Speak</p>
+                <p className="text-xl font-serif text-foreground italic">"Maintain your flow and speak freely..."</p>
               </div>
             )}
           </div>
@@ -548,13 +571,13 @@ export default function Practice() {
           {/* Audio Visualization - Focused */}
           <div className="w-full mb-12">
             <div className="flex items-center justify-center gap-2 mb-6">
-              <div className={cn("w-2 h-2 rounded-full", speech.isListening ? "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]" : "bg-gray-300")}></div>
+              <div className={cn("w-2.5 h-2.5 rounded-full", speech.isListening ? "bg-primary animate-pulse shadow-[0_0_12px_rgba(230,140,106,0.65)]" : "bg-muted-foreground/40")}></div>
               <p className="text-[10px] font-black text-muted-foreground font-sans uppercase tracking-[0.2em]">
-                {soundDetectedRef.current ? "Analyzing Speech" : "Waiting for sound"}
+                {soundDetectedRef.current ? "Recording Active - Analyzing Speech" : "Idle - Waiting for sound"}
               </p>
             </div>
 
-            <div className="h-44 flex items-center justify-center bg-white border border-sand-200 rounded-[50px] shadow-inner-lg overflow-hidden">
+            <div className="h-44 flex items-center justify-center bg-surface-card border border-border/80 rounded-[50px] shadow-inner overflow-hidden">
               {audioData ? (
                 <VoiceVisualizer
                   frequencyData={audioData.frequencyData}
@@ -563,7 +586,7 @@ export default function Practice() {
                   isRecording={true}
                 />
               ) : (
-                <Mic size={40} className="text-sand-200 animate-pulse" />
+                <Mic size={40} className="text-muted-foreground/50 animate-pulse" />
               )}
             </div>
           </div>
@@ -572,7 +595,7 @@ export default function Practice() {
           <button
             data-testid="stop-recording-btn"
             onClick={handleStop}
-            className="w-full md:w-auto px-16 py-5 rounded-full bg-red-500 hover:bg-red-600 text-white font-sans font-black text-lg btn-press shadow-2xl shadow-red-200 flex items-center justify-center gap-4 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full md:w-auto px-16 py-5 rounded-full bg-primary hover:brightness-110 text-primary-foreground font-sans font-black text-lg btn-press shadow-soft night-glow flex items-center justify-center gap-4 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <Square size={20} fill="white" className="rounded-sm" />
             Finish & View Results
@@ -583,8 +606,8 @@ export default function Practice() {
       {state === 'done' && lastResults && (
         <div className="text-center">
           <div className="mb-12">
-            <div className="w-20 h-20 bg-sage-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Zap size={32} className="text-sage-600" />
+            <div className="w-20 h-20 bg-surface-card border border-border/80 rounded-full flex items-center justify-center mx-auto mb-6 night-glow">
+              <Zap size={32} className="text-primary" />
             </div>
             <h2 className="text-3xl font-serif font-medium text-foreground mb-3">Excellent Practice!</h2>
             <p className="text-muted-foreground font-sans">Here's how you did just now</p>
@@ -594,25 +617,25 @@ export default function Practice() {
           <div className="mb-16">
             <h3 className="text-xl font-serif font-medium text-foreground mb-6 text-left">Performance Stats</h3>
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
-              <div className="p-6 bg-white border border-sand-300/50 rounded-3xl shadow-card">
+              <div className="p-6 night-panel rounded-3xl">
                 <p className="text-sm text-muted-foreground font-sans mb-2">Flow Score</p>
-                <p className="text-4xl font-serif font-medium text-sage-600">{lastResults.flowScore}%</p>
+                <p className="text-4xl font-serif font-medium text-primary">{lastResults.flowScore}%</p>
               </div>
-              <div className="p-6 bg-white border border-sand-300/50 rounded-3xl shadow-card">
+              <div className="p-6 night-panel rounded-3xl">
                 <p className="text-sm text-muted-foreground font-sans mb-2">Speaking Time</p>
-                <p className="text-4xl font-serif font-medium text-sage-600">{formatDuration(lastResults.totalSpeakingTime)}</p>
+                <p className="text-4xl font-serif font-medium text-primary">{formatDuration(lastResults.totalSpeakingTime)}</p>
               </div>
-              <div className="p-6 bg-white border border-sand-300/50 rounded-3xl shadow-card">
+              <div className="p-6 night-panel rounded-3xl">
                 <p className="text-sm text-muted-foreground font-sans mb-2">Silence Time</p>
-                <p className="text-4xl font-serif font-medium text-terracotta-500">{formatDuration(lastResults.silenceTime || 0)}</p>
+                <p className="text-4xl font-serif font-medium text-ember-600">{formatDuration(lastResults.silenceTime || 0)}</p>
               </div>
-              <div className="p-6 bg-white border border-sand-300/50 rounded-3xl shadow-card">
+              <div className="p-6 night-panel rounded-3xl">
                 <p className="text-sm text-muted-foreground font-sans mb-2">Total Session</p>
                 <p className="text-4xl font-serif font-medium text-foreground">{formatDuration(lastResults.totalSessionTime)}</p>
               </div>
-              <div className="p-6 bg-white border border-sand-300/50 rounded-3xl shadow-card">
+              <div className="p-6 night-panel rounded-3xl">
                 <p className="text-sm text-muted-foreground font-sans mb-2">Hesitations</p>
-                <p className="text-4xl font-serif font-medium text-terracotta-500">{lastResults.hesitationCount}</p>
+                <p className="text-4xl font-serif font-medium text-ember-600">{lastResults.hesitationCount}</p>
               </div>
             </div>
           </div>
@@ -620,10 +643,10 @@ export default function Practice() {
           {/* 2. Voice Recording Section */}
           <div className="mb-16">
             <h3 className="text-xl font-serif font-medium text-foreground mb-6 text-left flex items-center gap-2">
-              <Volume2 size={20} className="text-sage-600" />
+              <Volume2 size={20} className="text-primary" />
               Voice Recording
             </h3>
-            <div className="p-8 bg-white border border-sand-300/50 rounded-3xl shadow-card">
+            <div className="p-8 night-panel rounded-3xl">
               {lastResults.audioBlob ? (
                 <audio controls className="w-full">
                   <source src={URL.createObjectURL(lastResults.audioBlob)} type="audio/webm" />
@@ -631,7 +654,7 @@ export default function Practice() {
                 </audio>
               ) : (
                 <div className="text-center py-8">
-                  <Volume2 size={48} className="text-sage-300 mx-auto mb-4" />
+                  <Volume2 size={48} className="text-muted-foreground/60 mx-auto mb-4" />
                   <p className="text-muted-foreground font-sans">Audio recording will be available here</p>
                 </div>
               )}
@@ -641,10 +664,10 @@ export default function Practice() {
           {/* 3. Transcript Section */}
           <div className="mb-16">
             <h3 className="text-xl font-serif font-medium text-foreground mb-6 text-left flex items-center gap-2">
-              <FileText size={20} className="text-sage-600" />
+              <FileText size={20} className="text-primary" />
               Speech Transcript
             </h3>
-            <div className="p-8 bg-white border border-sand-300/50 rounded-3xl shadow-card">
+            <div className="p-8 night-panel rounded-3xl">
               <div className="text-left">
                 <p className="text-foreground font-sans leading-relaxed">
                   {lastResults.transcript}
@@ -656,13 +679,13 @@ export default function Practice() {
           <div className="flex flex-col md:flex-row gap-4 justify-center">
             <button
               onClick={handleRetry}
-              className="px-8 py-4 rounded-full bg-sage-500 hover:bg-sage-600 text-white font-sans font-semibold btn-press transition-colors"
+              className="px-8 py-4 rounded-full bg-primary hover:brightness-110 text-primary-foreground font-sans font-semibold btn-press transition-colors night-glow"
             >
               Practice Again
             </button>
             <button
               onClick={() => navigate('/stats')}
-              className="px-8 py-4 rounded-full bg-white border border-sand-300 hover:bg-sand-100 text-foreground font-sans font-semibold btn-press transition-colors"
+              className="px-8 py-4 rounded-full bg-surface-card border border-border hover:bg-surface-elevated text-foreground font-sans font-semibold btn-press transition-colors"
             >
               View All Stats
             </button>

@@ -19,7 +19,7 @@ export default function Prompts() {
   };
 
   return (
-    <div data-testid="prompts-page" className="min-h-screen pb-28 px-6 md:px-12 lg:px-20 pt-8 max-w-4xl mx-auto">
+    <div data-testid="prompts-page" className="min-h-screen pb-32 px-6 md:px-12 lg:px-20 pt-8 max-w-4xl mx-auto">
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-4xl md:text-5xl font-serif font-medium text-foreground mb-2">Speaking Prompts</h1>
@@ -28,7 +28,7 @@ export default function Prompts() {
         <button
           data-testid="random-prompt-btn"
           onClick={handlePickRandom}
-          className="flex items-center gap-2 px-5 py-3 rounded-full bg-sage-500 text-white font-sans font-semibold text-sm btn-press hover:bg-sage-600 flex-shrink-0" style={{ transition: 'background-color 0.2s ease' }}
+          className="flex items-center gap-2 px-5 py-3 rounded-full bg-primary text-primary-foreground font-sans font-semibold text-sm btn-press hover:brightness-110 flex-shrink-0 night-glow" style={{ transition: 'filter 0.2s ease' }}
         >
           <Shuffle size={16} />
           Random
@@ -46,8 +46,8 @@ export default function Prompts() {
               'px-4 py-2 rounded-full font-sans text-sm font-medium btn-press',
               'transition-colors duration-200',
               selectedCategory === cat
-                ? 'bg-sage-500 text-white'
-                : 'bg-sand-200 text-foreground hover:bg-sand-300'
+                ? 'bg-primary text-primary-foreground border border-ember-500/35'
+                : 'bg-surface-secondary border border-border text-[#AAB2C5] hover:bg-surface-interactive hover:border-ember-500/35'
             )}
           >
             {cat}
@@ -63,7 +63,7 @@ export default function Prompts() {
             <div
               key={prompt.id}
               data-testid={`prompt-card-${prompt.id}`}
-              className="rounded-2xl bg-white border border-sand-300/50 shadow-card p-6 card-hover"
+              className="rounded-2xl bg-surface-elevated border border-border shadow-card p-6 card-hover"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
@@ -71,14 +71,14 @@ export default function Prompts() {
                     <span className={cn('px-2.5 py-0.5 rounded-full text-xs font-sans font-semibold', diff.bg, diff.text)}>
                       {diff.label}
                     </span>
-                    <span className="text-xs text-muted-foreground font-sans">{prompt.category}</span>
+                    <span className="text-xs text-[#7C859A] font-sans">{prompt.category}</span>
                   </div>
-                  <p className="text-base text-foreground font-sans leading-relaxed">{prompt.text}</p>
+                  <p className="text-base text-[#AAB2C5] font-sans leading-relaxed">{prompt.text}</p>
                 </div>
                 <button
                   data-testid={`use-prompt-${prompt.id}`}
                   onClick={() => navigate(`/practice?prompt=${prompt.id}`)}
-                  className="flex-shrink-0 w-10 h-10 rounded-full bg-sage-100 text-sage-600 flex items-center justify-center btn-press hover:bg-sage-500 hover:text-white" style={{ transition: 'background-color 0.2s ease, color 0.2s ease' }}
+                  className="flex-shrink-0 w-10 h-10 rounded-full bg-surface-interactive border border-border text-primary flex items-center justify-center btn-press hover:border-ember-500/40 hover:text-ember-600" style={{ transition: 'border-color 0.2s ease, color 0.2s ease' }}
                 >
                   <Play size={16} fill="currentColor" />
                 </button>

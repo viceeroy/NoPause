@@ -19,6 +19,14 @@ module.exports = {
         '3xl': '1.5rem',
       },
       colors: {
+        surface: {
+          primary: 'var(--surface-card)',
+          secondary: 'var(--surface-elevated)',
+          elevated: 'var(--surface-elevated)',
+          interactive: 'var(--surface-interactive)',
+          base: 'var(--background-base)',
+          card: 'var(--surface-card)',
+        },
         sage: {
           50: '#f0f5f5',
           100: '#dae6e5',
@@ -47,6 +55,14 @@ module.exports = {
           400: '#D97C5F',
           500: '#c4613e',
           600: '#a24c30',
+        },
+        ember: {
+          100: '#5f3022',
+          200: '#7a3e2b',
+          300: '#954a32',
+          400: '#b85d3d',
+          500: '#d47451',
+          600: '#e68c6a',
         },
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
@@ -90,9 +106,9 @@ module.exports = {
         }
       },
       boxShadow: {
-        'soft': '0 4px 20px -2px rgba(90, 125, 124, 0.1)',
-        'card': '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1)',
-        'float': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        'soft': '0 10px 30px -14px rgba(230, 140, 106, 0.22)',
+        'card': '0 10px 30px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.04)',
+        'float': '0 22px 48px -24px rgba(0, 0, 0, 0.82)',
       },
       keyframes: {
         'accordion-down': {

@@ -27,9 +27,9 @@ export const RANDOM_WORDS = [
 export const CATEGORIES = ['All', 'Daily Life', 'Opinion', 'Storytelling', 'Abstract', 'Professional', 'Creative'];
 
 export const DIFFICULTY_COLORS = {
-  easy: { bg: 'bg-sage-100', text: 'text-sage-600', label: 'Easy' },
-  medium: { bg: 'bg-sand-300', text: 'text-sand-500', label: 'Medium' },
-  hard: { bg: 'bg-terracotta-100', text: 'text-terracotta-500', label: 'Hard' },
+  easy: { bg: 'bg-sage-500/20 border border-sage-400/30', text: 'text-sage-300', label: 'Easy' },
+  medium: { bg: 'bg-surface-interactive border border-border', text: 'text-[#AAB2C5]', label: 'Medium' },
+  hard: { bg: 'bg-ember-500/20 border border-ember-500/35', text: 'text-ember-600', label: 'Hard' },
 };
 
 export const TIMER_PRESETS = [

@@ -60,16 +60,55 @@ export default function Stats() {
     return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
   };
 
-  const StatCard = ({ icon: Icon, label, value, sub, className }) => (
-    <div className={`rounded-3xl p-6 ${className}`}>
-      <div className="flex items-start justify-between mb-4">
-        <div className="p-2.5 rounded-2xl bg-white/60">
-          <Icon size={20} className="text-sage-600" />
+  const StatCard = ({ icon: Icon, label, value, sub, footnote, className, variant = 'default' }) => (
+    <div className={cn(
+      'rounded-[22px] min-h-[124px] p-3.5 md:p-4 border shadow-card flex flex-col justify-between',
+      variant === 'gradient' ? 'text-white border-border' : 'elevation-card text-[#E6EAF2]',
+      className
+    )}>
+      <div className="flex items-start gap-2.5">
+        <div className={cn(
+          'p-2 rounded-xl border',
+          variant === 'gradient'
+            ? 'bg-surface-interactive/70 border-border'
+            : 'bg-surface-interactive border-border'
+        )}>
+          <Icon size={16} className={variant === 'gradient' ? 'text-white' : 'text-primary'} />
+        </div>
+        <div className="min-w-0">
+          <p className={cn(
+            'font-serif leading-tight text-sm md:text-base',
+            variant === 'gradient' ? 'text-white' : 'text-[#E6EAF2]'
+          )}>
+            {label}
+          </p>
+          {sub && (
+            <p className={cn(
+              'font-sans mt-0.5 text-[11px] leading-tight',
+              variant === 'gradient' ? 'text-white/80' : 'text-[#7C859A]'
+            )}>
+              {sub}
+            </p>
+          )}
         </div>
       </div>
-      <p className="text-3xl font-serif font-medium text-foreground">{value}</p>
-      <p className="text-sm text-muted-foreground mt-1 font-sans">{label}</p>
-      {sub && <p className="text-xs text-muted-foreground/70 mt-0.5">{sub}</p>}
+
+      <div className="text-center pt-1">
+        <p className={cn(
+          'text-[36px] leading-none font-serif font-bold',
+          variant === 'gradient' ? 'text-white' : 'text-[#E6EAF2]'
+        )}>
+          {value}
+        </p>
+        {footnote && (
+          <p className={cn(
+            'text-[10px] mt-1 font-sans font-semibold uppercase tracking-[0.15em]',
+            variant === 'gradient' ? 'text-white/75' : 'text-[#7C859A]'
+          )}>
+            {footnote}
+          </p>
+        )}
+      </div>
     </div>
   );
 
@@ -98,121 +137,68 @@ export default function Stats() {
     };
   });
 
+  const lemonAverage = lemonScores.length > 0
+    ? `${Math.round(lemonScores.reduce((sum, s) => sum + (s.flowScore || 0), 0) / lemonScores.length)}%`
+    : '-';
+
+  const topicAverage = topicScores.length > 0
+    ? `${Math.round(topicScores.reduce((sum, s) => sum + (s.flowScore || 0), 0) / topicScores.length)}%`
+    : '-';
+
   return (
-    <div data-testid="history-page" className="min-h-screen pb-28 px-6 md:px-12 lg:px-20 pt-8 max-w-6xl mx-auto">
+    <div data-testid="history-page" className="min-h-screen bg-surface-base pb-32 px-6 md:px-12 lg:px-20 pt-8 max-w-6xl mx-auto">
       <h1 className="text-4xl md:text-5xl font-serif font-medium text-foreground mb-2">Stats</h1>
       <p className="text-base text-muted-foreground font-sans mb-10">Your speaking performance metrics.</p>
 
       {/* New Metrics Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-12">
-        {/* Overall Flow Score */}
-        <div className="rounded-2xl bg-gradient-to-br from-sage-500 to-sage-600 text-white border border-sage-400/50 shadow-card p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 rounded-2xl bg-white/20">
-              <BarChart3 size={20} className="text-white" />
-            </div>
-            <div>
-              <h3 className="text-xl font-serif text-white mb-1">Overall Flow Score</h3>
-              <p className="text-sm text-sage-100 font-sans">Aggregate across all exercises</p>
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-4xl font-serif font-bold text-white mb-1">
-              {storage.calculateOverallFlowScore()}%
-            </div>
-            <div className="text-sm text-sage-100 font-sans font-medium uppercase tracking-widest opacity-80">
-              Overall Flow
-            </div>
-          </div>
-        </div>
-
-        {/* Free Speaking Score */}
-        <div className="rounded-2xl bg-gradient-to-br from-terracotta-500 to-terracotta-600 text-white border border-terracotta-400/50 shadow-card p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 rounded-2xl bg-white/20">
-              <Zap size={20} className="text-white" />
-            </div>
-            <div>
-              <h3 className="text-xl font-serif text-white mb-1">Free Speaking — Flow Score</h3>
-              <p className="text-sm text-terracotta-100 font-sans">Untimed exploration</p>
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-4xl font-serif font-bold text-white mb-1">
-              {stats?.totalSessions > 0 ? `${stats.avgScore}%` : '-'}
-            </div>
-            <div className="text-sm text-terracotta-100 font-sans font-medium uppercase tracking-widest opacity-80">
-              Free Speak
-            </div>
-          </div>
-        </div>
-
-        {/* Lemon Score */}
-        <div className="rounded-2xl bg-gradient-to-br from-yellow-500 to-yellow-600 text-white border border-yellow-400/50 shadow-card p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 rounded-2xl bg-white/20">
-              <Timer size={20} className="text-white" />
-            </div>
-            <div>
-              <h3 className="text-xl font-serif text-white mb-1">Lemon Flow Score</h3>
-              <p className="text-sm text-yellow-100 font-sans">1-minute random speaking</p>
-            </div>
-          </div>
-          <div className="text-center">
-            {(() => {
-              const avg = lemonScores.length > 0 ? Math.round(lemonScores.reduce((sum, s) => sum + (s.flowScore || 0), 0) / lemonScores.length) : null;
-              return (
-                <>
-                  <div className="text-4xl font-serif font-bold text-white mb-1">
-                    {avg !== null ? `${avg}%` : '-'}
-                  </div>
-                  <div className="text-sm text-yellow-100 font-sans font-medium uppercase tracking-widest opacity-80">
-                    Lemon Average
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
-
-        {/* Topic Score */}
-        <div className="rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-white border border-blue-400/50 shadow-card p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 rounded-2xl bg-white/20">
-              <Target size={20} className="text-white" />
-            </div>
-            <div>
-              <h3 className="text-xl font-serif text-white mb-1">Topic Flow Score</h3>
-              <p className="text-sm text-blue-100 font-sans">2-minute topic speaking</p>
-            </div>
-          </div>
-          <div className="text-center">
-            {(() => {
-              const avg = topicScores.length > 0 ? Math.round(topicScores.reduce((sum, s) => sum + (s.flowScore || 0), 0) / topicScores.length) : null;
-              return (
-                <>
-                  <div className="text-4xl font-serif font-bold text-white mb-1">
-                    {avg !== null ? `${avg}%` : '-'}
-                  </div>
-                  <div className="text-sm text-blue-100 font-sans font-medium uppercase tracking-widest opacity-80">
-                    Topic Average
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
+      <div className="grid grid-cols-2 gap-3 md:gap-4 mb-8">
+        <StatCard
+          icon={BarChart3}
+          label="Overall Flow"
+          sub="All exercises"
+          value={`${storage.calculateOverallFlowScore()}%`}
+          footnote="Overall"
+          variant="gradient"
+          className="bg-gradient-to-br from-sage-500 to-sage-600 border-sage-300/55"
+        />
+        <StatCard
+          icon={Zap}
+          label="Free Speaking"
+          sub="Untimed"
+          value={stats?.totalSessions > 0 ? `${stats.avgScore}%` : '-'}
+          footnote="Free Speak"
+          variant="gradient"
+          className="bg-gradient-to-br from-terracotta-500 to-terracotta-600 border-terracotta-300/55"
+        />
+        <StatCard
+          icon={Timer}
+          label="Lemon Flow"
+          sub="1 minute"
+          value={lemonAverage}
+          footnote="Lemon Avg"
+          variant="gradient"
+          className="bg-gradient-to-br from-yellow-500 to-yellow-600 border-yellow-300/55"
+        />
+        <StatCard
+          icon={Target}
+          label="Topic Flow"
+          sub="2 minutes"
+          value={topicAverage}
+          footnote="Topic Avg"
+          variant="gradient"
+          className="bg-gradient-to-br from-blue-500 to-blue-600 border-blue-300/55"
+        />
       </div>
 
       {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-10">
           {/* Streak */}
           <StatCard
             icon={Flame}
             label="Day Streak"
             value={stats.currentStreak}
             sub={`Best: ${stats.bestStreak}`}
-            className="bg-sand-100 border border-sand-300/50"
+            className="elevation-card-elevated"
           />
 
           {/* Sessions */}
@@ -220,7 +206,7 @@ export default function Stats() {
             icon={Target}
             label="Total Sessions"
             value={stats.totalSessions}
-            className="bg-white border border-sand-300/50 shadow-card"
+            className="elevation-card"
           />
 
           {/* Practice Time */}
@@ -228,52 +214,52 @@ export default function Stats() {
             icon={Clock}
             label="Practice Time"
             value={formatDuration(stats.totalPracticeTime)}
-            className="bg-white border border-sand-300/50 shadow-card"
+            className="elevation-card"
           />
         </div>
       )}
 
       {/* Trend Chart Section */}
       {allSessionsCombined.length > 1 && (
-        <div data-testid="multi-line-chart" className="rounded-3xl bg-white border border-sand-300/50 shadow-card p-8 mb-12">
+        <div data-testid="multi-line-chart" className="rounded-3xl bg-surface-secondary border border-border shadow-card p-8 mb-12">
           <div className="flex items-center gap-3 mb-8">
-            <div className="p-2.5 rounded-2xl bg-sage-50 text-sage-600">
+            <div className="p-2.5 rounded-2xl bg-surface-interactive border border-border text-primary">
               <TrendingUp size={20} />
             </div>
             <div>
-              <h3 className="text-xl font-serif text-foreground mb-1">Performance Trends</h3>
-              <p className="text-sm text-muted-foreground font-sans">Flow Score progress across all modes</p>
+              <h3 className="text-xl font-serif text-[#E6EAF2] mb-1">Performance Trends</h3>
+              <p className="text-sm text-[#7C859A] font-sans">Flow Score progress across all modes</p>
             </div>
           </div>
 
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={multiLineData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0EFEA" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
                 <XAxis
                   dataKey="name"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#949181', fontSize: 12, fontFamily: 'Nunito' }}
+                  tick={{ fill: '#7C859A', fontSize: 12, fontFamily: 'Nunito' }}
                   dy={10}
                 />
                 <YAxis
                   domain={[0, 100]}
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#949181', fontSize: 12, fontFamily: 'Nunito' }}
+                  tick={{ fill: '#7C859A', fontSize: 12, fontFamily: 'Nunito' }}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#fff',
-                    border: '1px solid #E5E3DC',
+                    backgroundColor: '#1B2238',
+                    border: '1px solid rgba(255,255,255,0.06)',
                     borderRadius: '16px',
-                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
+                    boxShadow: '0 12px 30px -18px rgba(0, 0, 0, 0.75)',
                     padding: '12px'
                   }}
-                  itemStyle={{ fontSize: '12px', fontFamily: 'Nunito', padding: '2px 0' }}
+                  itemStyle={{ fontSize: '12px', fontFamily: 'Nunito', padding: '2px 0', color: '#AAB2C5' }}
                   labelStyle={{ display: 'none' }}
-                  cursor={{ stroke: '#E5E3DC', strokeWidth: 1 }}
+                  cursor={{ stroke: 'rgba(255,255,255,0.06)', strokeWidth: 1 }}
                 />
 
                 {/* Overall - Red */}
@@ -284,7 +270,7 @@ export default function Stats() {
                   stroke="#D97C5F"
                   strokeWidth={4}
                   dot={{ r: 4, fill: '#D97C5F', strokeWidth: 0 }}
-                  activeDot={{ r: 6, fill: '#D97C5F', strokeWidth: 2, stroke: '#fff' }}
+                  activeDot={{ r: 6, fill: '#D97C5F', strokeWidth: 2, stroke: '#1B2238' }}
                   animationDuration={1800}
                 />
               </LineChart>
@@ -295,13 +281,13 @@ export default function Stats() {
 
       {allSessionsCombined.length === 0 ? (
         <div data-testid="empty-history" className="text-center py-20">
-          <Clock size={48} className="text-sand-400 mx-auto mb-4" />
+          <Clock size={48} className="text-[#7C859A] mx-auto mb-4" />
           <p className="text-lg font-serif text-foreground mb-2">No sessions yet</p>
-          <p className="text-sm text-muted-foreground font-sans mb-6">Complete your first practice session to see results here.</p>
+          <p className="text-sm text-[#AAB2C5] font-sans mb-6">Complete your first practice session to see results here.</p>
           <button
             data-testid="start-first-session-btn"
             onClick={() => navigate('/')}
-            className="px-8 py-3 rounded-full bg-sage-500 text-white font-sans font-semibold text-sm btn-press hover:bg-sage-600" style={{ transition: 'background-color 0.2s ease' }}
+            className="px-8 py-3 rounded-full bg-primary text-primary-foreground font-sans font-semibold text-sm btn-press hover:brightness-110 night-glow" style={{ transition: 'filter 0.2s ease' }}
           >
             Start Practicing
           </button>
@@ -320,15 +306,15 @@ export default function Stats() {
                 <div
                   key={uniqueKey}
                   data-testid={`session-${session.id}`}
-                  className="rounded-2xl bg-white border border-sand-300/50 shadow-card p-5 flex items-center gap-5 card-hover"
+                  className="rounded-2xl bg-surface-elevated border border-border shadow-card p-5 flex items-center gap-5 card-hover hover:border-ember-500/30"
                 >
                   {/* Score Badge */}
                   <div className={cn(
                     "flex-shrink-0 w-14 h-14 rounded-2xl flex flex-col items-center justify-center",
-                    session.mode === 'lemon' ? "bg-yellow-50" : (session.mode === 'topic' ? "bg-blue-50" : "bg-sand-100")
+                    session.mode === 'lemon' ? "bg-yellow-500/15 border border-yellow-400/30" : (session.mode === 'topic' ? "bg-blue-500/15 border border-blue-400/30" : "bg-surface-interactive border border-border")
                   )}>
-                    <span className="text-lg font-serif font-medium text-foreground">{score}</span>
-                    <span className="text-[9px] font-sans font-semibold uppercase text-muted-foreground">%</span>
+                    <span className="text-lg font-serif font-medium text-[#E6EAF2]">{score}</span>
+                    <span className="text-[9px] font-sans font-semibold uppercase text-[#7C859A]">%</span>
                   </div>
 
                   {/* Details */}
@@ -336,14 +322,14 @@ export default function Stats() {
                     <div className="flex items-center gap-2 mb-1">
                       <span className={cn(
                         "text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-md",
-                        session.mode === 'lemon' ? "bg-yellow-100 text-yellow-700" :
-                          (session.mode === 'topic' ? "bg-blue-100 text-blue-700" : "bg-sand-200 text-sand-700")
+                        session.mode === 'lemon' ? "bg-yellow-500/20 text-yellow-200 border border-yellow-400/25" :
+                          (session.mode === 'topic' ? "bg-blue-500/20 text-blue-200 border border-blue-400/25" : "bg-surface-interactive text-[#AAB2C5] border border-border")
                       )}>
                         {displayMode}
                       </span>
-                      <span className="text-sm font-sans font-semibold text-foreground truncate">{sessionTitle}</span>
+                      <span className="text-sm font-sans font-semibold text-[#E6EAF2] truncate">{sessionTitle}</span>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground font-sans">
+                    <div className="flex items-center gap-3 text-xs text-[#AAB2C5] font-sans">
                       <span>{formatTime(session.totalSessionTime || session.duration || 0)} duration</span>
                       <span>{session.hesitationCount || session.hesitation_count || 0} pauses</span>
                     </div>
@@ -351,11 +337,11 @@ export default function Stats() {
 
                   {/* Date & Actions */}
                   <div className="flex-shrink-0 flex flex-col items-end gap-2">
-                    <span className="text-xs text-muted-foreground font-sans">{formatDate(session.created_at)}</span>
+                    <span className="text-xs text-[#7C859A] font-sans">{formatDate(session.created_at)}</span>
                     <button
                       data-testid={`delete-session-${session.id}`}
                       onClick={() => handleDelete(session.id, session.mode)}
-                      className="p-1.5 rounded-lg hover:bg-sand-200 text-muted-foreground/50 hover:text-terracotta-400 btn-press"
+                      className="p-1.5 rounded-lg hover:bg-surface-interactive text-muted-foreground/50 hover:text-terracotta-400 btn-press"
                     >
                       <Trash2 size={14} />
                     </button>

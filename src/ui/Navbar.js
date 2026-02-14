@@ -15,7 +15,7 @@ export const Navbar = () => {
   return (
     <nav
       data-testid="main-navbar"
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 px-3 py-2 bg-white/80 backdrop-blur-xl border border-sand-300/50 rounded-full shadow-float"
+      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 px-2.5 py-2 bg-surface-elevated/92 backdrop-blur-xl border border-border/80 rounded-full shadow-float"
     >
       {navItems.map((item) => {
         const isActive = location.pathname === item.path;
@@ -29,8 +29,8 @@ export const Navbar = () => {
               'flex items-center gap-2 px-4 py-2.5 rounded-full font-sans text-sm font-medium btn-press',
               'transition-colors duration-200',
               isActive
-                ? 'bg-sage-500 text-white'
-                : 'text-muted-foreground hover:text-foreground hover:bg-sand-200'
+                ? 'bg-primary text-primary-foreground night-glow'
+                : 'text-muted-foreground hover:text-foreground hover:bg-surface-card'
             )}
           >
             <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
